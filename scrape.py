@@ -16,7 +16,7 @@ def write_json(file_path: str, data):
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
-def update_entry(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
+def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
     """Update database.
     """
     # Create new file if it does not exist.
@@ -24,18 +24,24 @@ def update_entry(url: str, price_elements: List[float] = None, file_path: str = 
         with open(file_path, 'w') as outfile:
             json.dump({}, outfile)
 
+    # Read and update file
+    entries = read_json(file_path)
     name = re.findall(r"(?<=tick=).*", url)[0] # regex pattern to match ticker
-
-    # Update file
+    last_time_checked = ...
+    prev_lowest_price = ...
     to_add = {name: {
         'url': url,
+        'last_time_checked': last_time_checked,
+        'prev_lowest_price': prev_lowest_price,
+        'curr_lowest_price': price_elements[0],
+        'curr_low_avg_price': sum(price_elements[0:6])/6
         }
     }
-
-    entries = read_json(file_path)
     entries.update(to_add)
 
     write_json(file_path, entries)
+
+    return entries
 
 def extract_price_elements(url: str, selectors: List[str], elements_per_page: int = 20):
     """Extracts price data from first page of UniSat rune.

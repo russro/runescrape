@@ -9,7 +9,11 @@ SELECTORS = [
     for x in range(ELEMENTS_PER_PAGE)
 ]
 
+def call_prices():
+    price_elements = scrape.extract_price_elements(URL, SELECTORS, ELEMENTS_PER_PAGE) # scrape price data at time
+    updated_entries = scrape.update_db_entries(URL, price_elements) # update database
+    ... # 
+
 
 if __name__ == "__main__":
-    price_elements = scrape.extract_price_elements(URL, SELECTORS, ELEMENTS_PER_PAGE)
-    scrape.update_entry(URL, price_elements)
+    call_prices()
