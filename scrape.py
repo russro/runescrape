@@ -1,13 +1,43 @@
+
+import os
+import json
 import re
 
 from playwright.sync_api import sync_playwright
 from typing import List
 
 
-def save_elements(elements):
-    pass
+def read_json(file_path: str):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    return data
 
-def extract_price_elements(url: str, elements_per_page: int, selectors: List[str]):
+def write_json(file_path: str, data):
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
+
+def update_entry(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
+    """Update database.
+    """
+    # Create new file if it does not exist.
+    if not os.path.exists(file_path):
+        with open(file_path, 'w') as outfile:
+            json.dump({}, outfile)
+
+    name = re.findall(r"(?<=tick=).*", url)[0] # regex pattern to match ticker
+
+    # Update file
+    to_add = {name: {
+        'url': url,
+        }
+    }
+
+    entries = read_json(file_path)
+    entries.update(to_add)
+
+    write_json(file_path, entries)
+
+def extract_price_elements(url: str, selectors: List[str], elements_per_page: int = 20):
     """Extracts price data from first page of UniSat rune.
     """
     with sync_playwright() as p:
@@ -30,4 +60,6 @@ def extract_price_elements(url: str, elements_per_page: int, selectors: List[str
             elements[i] = element_text # Assign in ascending order
 
         browser.close()
+    
+    return elements
 

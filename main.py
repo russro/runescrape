@@ -1,4 +1,5 @@
-from scrape import extract_price_elements
+
+import scrape
 
 # TODO: put into JSON file
 URL = r"https://unisat.io/runes/market?tick=SATOSHI%E2%80%A2NAKAMOTO"
@@ -10,4 +11,5 @@ SELECTORS = [
 
 
 if __name__ == "__main__":
-    extract_price_elements(URL, ELEMENTS_PER_PAGE, SELECTORS)
+    price_elements = scrape.extract_price_elements(URL, SELECTORS, ELEMENTS_PER_PAGE)
+    scrape.update_entry(URL, price_elements)
