@@ -5,38 +5,56 @@ import re
 
 from playwright.sync_api import sync_playwright
 from typing import List
+from datetime import datetime
 
+def new_json(file_path: str):
+    """Create empty json file.
+    """
+    with open(file_path, 'w') as outfile:
+        json.dump({}, outfile)
 
 def read_json(file_path: str):
-    with open(file_path, 'r') as file:
-        data = json.load(file)
+    """Read and return contents of json file.
+    """
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+    except:
+        new_json(file_path)
+        with open(file_path, 'r') as file:
+            data = json.load(file)
     return data
 
 def write_json(file_path: str, data):
+    """Write to json file.
+    """
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
 def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
-    """Update database.
+    """Update database and return updated entries.
     """
     # Create new file if it does not exist.
     if not os.path.exists(file_path):
-        with open(file_path, 'w') as outfile:
-            json.dump({}, outfile)
+        new_json(file_path)
 
     # Read and update file
     entries = read_json(file_path)
     name = re.findall(r"(?<=tick=).*", url)[0] # regex pattern to match ticker
-    last_time_checked = ...
+    curr_time_checked = datetime.now()
+    prev_time_checked = (entries[name]['curr_time_checked'] if name in entries and 'curr_time_checked' in entries[name] 
+                         else curr_time_checked)
     prev_lowest_price = ...
     to_add = {name: {
         'url': url,
-        'last_time_checked': last_time_checked,
+        'prev_time_checked': prev_time_checked,
+        'curr_time_checked': curr_time_checked,
         'prev_lowest_price': prev_lowest_price,
         'curr_lowest_price': price_elements[0],
-        'curr_low_avg_price': sum(price_elements[0:6])/6
+        'curr_low_avg_price': sum(price_elements[0:6])/6,
         }
     }
+    print(to_add[name]['curr_low_avg_price'])
     entries.update(to_add)
 
     write_json(file_path, entries)
@@ -63,7 +81,7 @@ def extract_price_elements(url: str, selectors: List[str], elements_per_page: in
             print("Element text:", processed_element)
             print(type(processed_element))
 
-            elements[i] = element_text # Assign in ascending order
+            elements[i] = processed_element # Assign in ascending order
 
         browser.close()
     
