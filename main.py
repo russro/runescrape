@@ -1,9 +1,13 @@
-import asyncio
+from scrape import extract_price_elements
 
-from scrape import save_webpage_as_html
+# TODO: put into JSON file
+URL = r"https://unisat.io/runes/market?tick=SATOSHI%E2%80%A2NAKAMOTO"
+ELEMENTS_PER_PAGE = 20
+SELECTORS = [
+    f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
+    for x in range(ELEMENTS_PER_PAGE)
+]
+
 
 if __name__ == "__main__":
-    url = "https://unisat.io/runes/market"
-    output_file = "example.html"
-    selector = "#__next > div.main-container.runes.market > div.mt32.trending-in-brc20 > div.table-container.scroll-x.radius20.border-015 > table > tbody > tr:nth-child(4) > td:nth-child(3) > div"
-    save_webpage_as_html(url, output_file, selector)
+    extract_price_elements(URL, ELEMENTS_PER_PAGE, SELECTORS)
