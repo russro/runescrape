@@ -4,7 +4,7 @@ from playwright.sync_api import sync_playwright
 from typing import List
 
 
-def save_element(element):
+def save_elements(elements):
     pass
 
 def extract_price_elements(url: str, elements_per_page: int, selectors: List[str]):
@@ -21,9 +21,11 @@ def extract_price_elements(url: str, elements_per_page: int, selectors: List[str
         # Extract and assign all price elements in page
         for i, selector in enumerate(selectors):
             page.wait_for_selector(selector) # wait for the element in the page to fully load
-            element_text = float(re.sub("[^0-9.]", "", page.inner_text(selector))) # extract to float
-            print("Element text:", element_text)
-            print(type(element_text))
+            element_text = page.inner_text(selector) # extract to float
+            processed_element = float(re.sub("[^0-9.]", "", element_text))
+
+            print("Element text:", processed_element)
+            print(type(processed_element))
 
             elements[i] = element_text # Assign in ascending order
 
