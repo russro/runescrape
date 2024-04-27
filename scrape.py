@@ -7,6 +7,7 @@ from playwright.sync_api import sync_playwright
 from typing import List
 from datetime import datetime
 
+
 def new_json(file_path: str):
     """Create empty json file.
     """
@@ -40,18 +41,22 @@ def update_db_entries(url: str, price_elements: List[float] = None, file_path: s
 
     # Read and update file
     entries = read_json(file_path)
+
     name = re.findall(r"(?<=tick=).*", url)[0] # regex pattern to match ticker
-    curr_time_checked = datetime.now()
+    curr_time_checked = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     prev_time_checked = (entries[name]['curr_time_checked'] if name in entries and 'curr_time_checked' in entries[name] 
                          else curr_time_checked)
-    prev_lowest_price = ...
-    to_add = {name: {
-        'url': url,
-        'prev_time_checked': prev_time_checked,
-        'curr_time_checked': curr_time_checked,
-        'prev_lowest_price': prev_lowest_price,
-        'curr_lowest_price': price_elements[0],
-        'curr_low_avg_price': sum(price_elements[0:6])/6,
+    curr_lowest_price = price_elements[0]
+    prev_lowest_price = (entries[name]['curr_lowest_price'] if name in entries and 'curr_lowest_price' in entries[name] 
+                         else curr_lowest_price)
+    to_add = {
+        name: {
+            'url': url,
+            'prev_time_checked': prev_time_checked,
+            'curr_time_checked': curr_time_checked,
+            'prev_lowest_price': prev_lowest_price,
+            'curr_lowest_price': curr_lowest_price,
+            'curr_low_avg_price': sum(price_elements[0:6])/6,
         }
     }
     print(to_add[name]['curr_low_avg_price'])
