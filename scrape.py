@@ -59,7 +59,6 @@ def update_db_entries(url: str, price_elements: List[float] = None, file_path: s
             'curr_low_avg_price': sum(price_elements[0:6])/6,
         }
     }
-    print(to_add[name]['curr_low_avg_price'])
     entries.update(to_add)
 
     write_json(file_path, entries)
@@ -82,9 +81,6 @@ def extract_price_elements(url: str, selectors: List[str], elements_per_page: in
             page.wait_for_selector(selector) # wait for the element in the page to fully load
             element_text = page.inner_text(selector) # extract to float
             processed_element = float(re.sub("[^0-9.]", "", element_text))
-
-            print("Element text:", processed_element)
-            print(type(processed_element))
 
             elements[i] = processed_element # Assign in ascending order
 
