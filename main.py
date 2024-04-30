@@ -8,10 +8,6 @@ import scrape
 from typing import List
 
 
-# TODO: put into JSON file
-URL = r"https://unisat.io/runes/market?tick=DOG%E2%80%A2GO%E2%80%A2TO%E2%80%A2THE%E2%80%A2MOON"
-
-
 nest_asyncio.apply()
 
 intents = discord.Intents.default()
