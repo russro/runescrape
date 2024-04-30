@@ -74,7 +74,7 @@ def update_db_entries(url: str, price_elements: List[float] = None, file_path: s
 
     return entries
 
-async def extract_price_elements(url: str, selectors: List[str], elements_per_page: int = 20):
+async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, elements_per_page: int = ELEMENTS_PER_PAGE):
     """Extracts price data from first page of UniSat rune.
     """
     async with async_playwright() as p:
