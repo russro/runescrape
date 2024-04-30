@@ -18,7 +18,7 @@ access_token = os.getenv('DISCORD_TOKEN')
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
 
-async def scrape(message):
+async def scrape_(message):
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
@@ -34,6 +34,6 @@ async def on_message(message):
 
     if message.content == '!scrape':
         await message.channel.send('Scraping...')
-        asyncio.run(scrape(message))
+        asyncio.run(scrape_(message))
 
 client.run(access_token)

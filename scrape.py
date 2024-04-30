@@ -8,6 +8,13 @@ from typing import List
 from datetime import datetime
 
 
+ELEMENTS_PER_PAGE = 20
+SELECTORS = [
+    f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
+    for x in range(ELEMENTS_PER_PAGE)
+]
+
+
 def new_json(file_path: str):
     """Create empty json file.
     """

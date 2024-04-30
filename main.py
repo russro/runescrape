@@ -1,12 +1,10 @@
 
-
 import os
 import discord
 import asyncio
 import nest_asyncio
 import scrape
 
-from playwright.async_api import async_playwright
 from typing import List
 
 
@@ -24,7 +22,6 @@ intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
 client = discord.Client(intents=intents)
-
 access_token = os.getenv('DISCORD_TOKEN')
 
 
@@ -32,7 +29,7 @@ access_token = os.getenv('DISCORD_TOKEN')
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
 
-def call_prices(url: str, selectors: List[str], elements_per_page: int):
+def call_store_prices(url: str, selectors: List[str], elements_per_page: int):
     """Scrapes prices from Unisat URL; updates and returns prices for tokens.
     """
     price_elements = asyncio.run(scrape.extract_price_elements(url, selectors, elements_per_page)) # scrape price data at time
@@ -40,18 +37,18 @@ def call_prices(url: str, selectors: List[str], elements_per_page: int):
 
     return updated_entries
 
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
+def entries_to_str(entries):
+    """Turn scraped entries
+    """
 
-    if message.content == '!scrape':
-        await message.channel.send('Scraping...')
-        curr_entries = call_prices(URL, SELECTORS, ELEMENTS_PER_PAGE)
-        await message.channel.send(curr_entries)
+async def scrape(ctx, url):
+    await ctx.send('Scraping...')
+    curr_entries = call_store_prices(url, SELECTORS, ELEMENTS_PER_PAGE)
+    await ctx.send(curr_entries)
+
+# @client.event()
+# async def on_message(message):
 
 
 if __name__ == "__main__":
-    # entries = call_prices(URL, SELECTORS, ELEMENTS_PER_PAGE)
-    # print(entries)
     client.run(access_token)
