@@ -2,7 +2,6 @@
 import os
 import json
 import re
-import asyncio
 
 from playwright.async_api import async_playwright
 from typing import List
@@ -53,14 +52,16 @@ def update_db_entries(url: str, price_elements: List[float] = None, file_path: s
     to_add = {
         name: {
             'url': url,
+            # 'prev_hour_checked': ...,
             'prev_time_checked': prev_time_checked,
+            # 'curr_hour_checked': ...,
             'curr_time_checked': curr_time_checked,
             'prev_lowest_price': prev_lowest_price,
             'curr_lowest_price': curr_lowest_price,
             'curr_low_avg_price': sum(price_elements[0:6])/6,
         }
     }
-    entries.update(to_add)
+    entries.update(to_add) # update dictionary
 
     write_json(file_path, entries)
 
@@ -69,7 +70,7 @@ def update_db_entries(url: str, price_elements: List[float] = None, file_path: s
 async def extract_price_elements(url: str, selectors: List[str], elements_per_page: int = 20):
     """Extracts price data from first page of UniSat rune.
     """
-    with async_playwright() as p:
+    async with async_playwright() as p:
         # Open and go to URL
         browser = await p.chromium.launch()
         page = await browser.new_page()
