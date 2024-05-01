@@ -39,8 +39,8 @@ def write_json(file_path: str, data):
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
-def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
-    """Update database and return updated entries.
+def read_curr_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
+    """Read database and return updated dictionary (without updating the db).
     """
     # Create new file if it does not exist.
     if not os.path.exists(file_path):
@@ -68,8 +68,15 @@ def update_db_entries(url: str, price_elements: List[float] = None, file_path: s
             'curr_low_avg_price': sum(price_elements[0:6])/6,
         }
     }
+
     entries.update(to_add) # update dictionary
 
+    return entries
+
+def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
+    """Update database and return updated entries.
+    """
+    entries = curr_entries(url, price_elements, file_path)
     write_json(file_path, entries)
 
     return entries
