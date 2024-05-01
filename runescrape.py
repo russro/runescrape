@@ -15,6 +15,29 @@ SELECTORS = [
 ]
 
 
+async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, elements_per_page: int = ELEMENTS_PER_PAGE):
+    """Extracts price data from first page of UniSat rune.
+    """
+    async with async_playwright() as p:
+        # Open and go to URL
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.goto(url)
+        
+        elements = [0]*elements_per_page # preallocate price elements to save
+
+        # Extract and assign all price elements in page
+        for i, selector in enumerate(selectors):
+            await page.wait_for_selector(selector) # wait for the element in the page to fully load
+            element_text = await page.inner_text(selector) # extract to float
+            processed_element = float(re.sub("[^0-9.]", "", element_text))
+
+            elements[i] = processed_element # Assign in ascending order
+
+        await browser.close()
+    
+    return elements
+
 def new_json(file_path: str):
     """Create empty json file.
     """
@@ -39,6 +62,10 @@ def write_json(file_path: str, data):
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
+def url_to_ticker(url):
+    name = re.findall(r"(?<=tick=).*", url)[0] # regex pattern to match ticker
+    return name
+
 def read_curr_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
     """Read database and return updated dictionary (without updating the db).
     """
@@ -49,7 +76,7 @@ def read_curr_entries(url: str, price_elements: List[float] = None, file_path: s
     # Read and update file
     entries = read_json(file_path)
 
-    name = re.findall(r"(?<=tick=).*", url)[0] # regex pattern to match ticker
+    name = url_to_ticker(url)
     curr_time_checked = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     prev_time_checked = (entries[name]['curr_time_checked'] if name in entries and 'curr_time_checked' in entries[name] 
                          else curr_time_checked)
@@ -59,9 +86,12 @@ def read_curr_entries(url: str, price_elements: List[float] = None, file_path: s
     to_add = {
         name: {
             'url': url,
-            # 'prev_hour_checked': ...,
+            'prev_hour_checked': 0, # REPLACE
+            'curr_hour_checked': 0, # REPLACE
+            'prev_hour_lowest_price': 0, # REPLACE
+            'curr_hour_lowest_price': 0, # REPLACE
+            'curr_hour_low_avg_price': 0, # REPLACE
             'prev_time_checked': prev_time_checked,
-            # 'curr_hour_checked': ...,
             'curr_time_checked': curr_time_checked,
             'prev_lowest_price': prev_lowest_price,
             'curr_lowest_price': curr_lowest_price,
@@ -76,31 +106,10 @@ def read_curr_entries(url: str, price_elements: List[float] = None, file_path: s
 def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
     """Update database and return updated entries.
     """
-    entries = curr_entries(url, price_elements, file_path)
+    entries = read_curr_entries(url, price_elements, file_path)
     write_json(file_path, entries)
 
     return entries
 
-async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, elements_per_page: int = ELEMENTS_PER_PAGE):
-    """Extracts price data from first page of UniSat rune.
-    """
-    async with async_playwright() as p:
-        # Open and go to URL
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.goto(url)
-        
-        elements = [0]*elements_per_page # preallocate price elements to save
 
-        # Extract and assign all price elements in page
-        for i, selector in enumerate(selectors):
-            await page.wait_for_selector(selector) # wait for the element in the page to fully load
-            element_text = await page.inner_text(selector) # extract to float
-            processed_element = float(re.sub("[^0-9.]", "", element_text))
-
-            elements[i] = processed_element # Assign in ascending order
-
-        await browser.close()
-    
-    return elements
 
