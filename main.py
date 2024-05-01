@@ -1,10 +1,10 @@
 
 import os
+import requests
 import discord
 import asyncio
 import nest_asyncio
 import validators
-# import satoshi
 import runescrape
 
 
@@ -33,13 +33,20 @@ def call_save_prices(url: str):
 
     return updated_entries
 
+def sats_to_usd(sats):
+    """Convert sats to USD.
+    """
+    response = requests.get('https://api.coindesk.com/v1/bpi/currentprice.json')
+    sats_to_usd_rate = response.json()['bpi']['USD']['rate_float'] / 100000000
+    return round(sats * sats_to_usd_rate, 2)
+
 def scrape_disc_msg(url, entry):
     """Turn singular entry into a Discord-readable message.
     """
     ticker = runescrape.url_to_ticker(url)
     lowest_sats = entry[ticker]['curr_lowest_price']
-    discmsg = (f"**{ticker}** is currently priced at **{lowest_sats} sats**"
-               f" or **$X USD**.")
+    discmsg = (f"**{ticker}** is currently priced at **{lowest_sats} sats** per token"
+               f" or **${sats_to_usd(lowest_sats)} USD** per token.")
 
     return discmsg
 

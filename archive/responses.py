@@ -1,5 +1,5 @@
 
-import scrape
+import runescrape
 
 from typing import List
 
@@ -15,8 +15,8 @@ SELECTORS = [
 async def call_prices(url: str, selectors: List[str], elements_per_page: int):
     """Scrapes prices from Unisat URL; updates and returns prices for tokens.
     """
-    price_elements = await scrape.extract_price_elements(url, selectors, elements_per_page) # scrape price data at time
-    updated_entries = scrape.update_db_entries(url, price_elements) # update database
+    price_elements = await runescrape.extract_price_elements(url, selectors, elements_per_page) # scrape price data at time
+    updated_entries = runescrape.update_db_entries(url, price_elements) # update database
 
     return updated_entries
 
