@@ -1,7 +1,7 @@
 # TODO
 ## Backend (Scraper and DB)
-* **DONE **- Func for scraping price data from URL (specific coin URL).
-* **DONE **- JSON database for rune tokens.
+* **DONE**- Func for scraping price data from URL (specific coin URL).
+* **DONE**- JSON database for rune tokens.
 ## Frontend (Discord cmd)
 * Return lowest price and average of lowest prices per token (and per X number of tokens, where X is the amt of tokens per mint). Present in satoshis and USD.
 * Check and stores prices in last hour, every 5 mins. Check for +/-10% change every hour and alert channel if change occurs.
