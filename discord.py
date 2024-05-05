@@ -10,8 +10,14 @@ import runescrape
 from discord.ext import commands
 
 
+# Config variables
+PRICE_DATABASE_PATH = os.getenv('PRICE_DATABASE_PATH')
+NICKNAME_DATABASE_PATH = os.getenv('NICKNAME_DATABASE_PATH')
+
+# Enable nested asyncio calls
 nest_asyncio.apply()
 
+# Discord bot setup
 intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
@@ -20,21 +26,46 @@ access_token = os.getenv('DISCORD_TOKEN')
 
 
 @bot.command()
-async def add(ctx, rune_name_or_url: str = None):
+async def add(ctx, rune_name_or_url: str = None) -> None:
+    """Add rune to database.
+    """
+    # Return if command input lacks
     if rune_name_or_url is None:
         await ctx.send("Input must be of form '!add [RUNE_NAME_OR_URL]'.")
         return
+    
+    # Standardize rune name/url
     rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
-    rune_prices = runescrape.read_json()
-    ... # check db
-    ... # if rune exists in db, say so and send the last updated entry
-    ... # if rune does not exist in db, scrape
+
+    # Load db
+    rune_prices = runescrape.read_json(file_path=PRICE_DATABASE_PATH)
+
+    # Check db if rune already exists; if so, return
+    if rune_name_standardized in rune_prices:
+        await ctx.send(f"{rune_name_standardized} already added.")
+        ... # TODO: send last updated entry
+        return
+    
+    # Scrape web for rune
+    url = runescrape.rune_name_standardized_to_url(rune_name_standardized)
+    price_elements = runescrape.extract_price_elements(url)
+    if isinstance(price_elements, Exception):
+        await ctx.send("Rune either lacks enough entries or does not exist on UniSat.")
+        return
+    
+    # Add scraped data to db
+    
+    
+
     ... # if scrape fails, say so and send
     ... # if scrape succeeds, add to db and send the updated entry
 
 @bot.command()
 async def status(ctx, rune_name_or_url: str = None):
-    if rune_name_or_url is not None:
+    if rune_name_or_url is None:
+        ...
+        return
+    else:
         rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
         ... # open db
         ... # send 
