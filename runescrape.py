@@ -2,6 +2,7 @@
 import os
 import json
 import re
+import validators
 
 from playwright.async_api import async_playwright
 from typing import List
@@ -9,6 +10,7 @@ from datetime import datetime
 
 
 # CONFIG VARS
+DATABASE = "rune_prices.json"
 ELEMENTS_PER_PAGE = 20
 SELECTORS = [
     f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
@@ -17,6 +19,8 @@ SELECTORS = [
 
 
 def url_to_ticker(url):
+    """Extracts rune ticker name from specific rune UniSat URL.
+    """
     name = re.findall(r"tick=([^&]*)", url)[0] # regex pattern to match ticker
     return name
 
@@ -30,6 +34,14 @@ def rune_string_standardizer(rune_name_input: str) -> str:
         rune_name_standardized = rune_name_input.replace("%E2%80%A2", ".").replace("•", ".").lower()
     except Exception as e:
         return e
+
+    return rune_name_standardized
+
+def rune_name_or_url_standardizer(rune_name_or_url: str) -> str:
+    """Converts rune name or URL to standard format.
+    """
+    rune_name = url_to_ticker(rune_name_or_url) if validators.url(rune_name_or_url) else rune_name_or_url
+    rune_name_standardized = rune_string_standardizer(rune_name)
 
     return rune_name_standardized
 
@@ -56,13 +68,13 @@ async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, ele
     
     return elements
 
-def new_json(file_path: str):
+def new_json(file_path: str = DATABASE):
     """Create empty json file.
     """
     with open(file_path, 'w') as outfile:
         json.dump({}, outfile)
 
-def read_json(file_path: str):
+def read_json(file_path: str = DATABASE):
     """Read and return contents of json file.
     """
     try:
@@ -74,15 +86,13 @@ def read_json(file_path: str):
             data = json.load(file)
     return data
 
-def write_json(file_path: str, data):
+def write_json(file_path: str, data = DATABASE):
     """Write to json file.
     """
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
-
-
-def read_curr_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
+def read_curr_entries(url: str, price_elements: List[float] = None, file_path: str = DATABASE):
     """Read database and return updated dictionary (without updating the db).
     """
     # Create new file if it does not exist.
@@ -119,7 +129,7 @@ def read_curr_entries(url: str, price_elements: List[float] = None, file_path: s
 
     return entries
 
-def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
+def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = DATABASE):
     """Update database and return updated entries.
     """
     entries = read_curr_entries(url, price_elements, file_path)

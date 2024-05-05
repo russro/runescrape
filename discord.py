@@ -20,14 +20,26 @@ access_token = os.getenv('DISCORD_TOKEN')
 
 
 @bot.command()
-async def add(ctx, rune_name_or_url):
-    rune_name = runescrape.url_to_ticker(rune_name_or_url) if validators.url(rune_name_or_url) else rune_name_or_url
-    rune_name_standardized = runescrape.rune_string_standardizer(rune_name)
+async def add(ctx, rune_name_or_url: str = None):
+    if rune_name_or_url is None:
+        await ctx.send("Input must be of form '!add [RUNE_NAME_OR_URL]'.")
+        return
+    rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
+    rune_prices = runescrape.read_json()
     ... # check db
-    ... # if rune exists in db, say so and return the last updated entry
+    ... # if rune exists in db, say so and send the last updated entry
     ... # if rune does not exist in db, scrape
-    ... # if scrape fails, say so and return
-    ... # if scrape succeeds, add to db and return the updated entry
+    ... # if scrape fails, say so and send
+    ... # if scrape succeeds, add to db and send the updated entry
+
+@bot.command()
+async def status(ctx, rune_name_or_url: str = None):
+    if rune_name_or_url is not None:
+        rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
+        ... # open db
+        ... # send 
+        return
+
 
 def call_prices(url: str):
     """Scrapes prices from UniSat URL; returns prices for tokens without updating db.
@@ -62,13 +74,13 @@ def scrape_disc_msg(url, entry):
 
     return discmsg
 
-@client.event
+@bot.event
 async def on_ready():
-    print(f'{client.user.name} has connected to Discord!')
+    print(f'{bot.user.name} has connected to Discord!')
 
-@client.event
+@bot.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     if message.content.startswith('!scrape'):
@@ -82,4 +94,4 @@ async def on_message(message):
 
 
 if __name__ == "__main__":
-    client.run(access_token)
+    bot.run(access_token)
