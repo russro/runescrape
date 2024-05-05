@@ -85,17 +85,14 @@ updated!
 
 # TODO
 ## Backend (Scraper and DB)
-* **DONE**- Func for scraping price data from URL (specific coin URL).
-* **DONE**- JSON database for rune tokens.
-## Frontend (Discord cmd)
-* Return lowest price and average of lowest prices per token (and per X number of tokens, where X is the amt of tokens per mint). Present in satoshis and USD.
-* Check and stores prices in last hour, every 5 mins. Check for +/-10% change every hour and alert channel if change occurs.
-* Schedule message every 4 hours of status of all tokens and how they changed in the last 24 hours.
+* **DONE** - Func for scraping price data from URL (specific coin URL).
+* **DONE** - JSON database for rune tokens.
+## Frontend (Discord Coommands)
+* Refer to contents below section 'Discord Commands'.
 ## Future features
-* Format to " !scrape satoshi.nakamoto " or just semantic similarity in general
-* Maybe a new db for nickname search instead of semantic similarity
+* Maybe add a new db for nickname storage and search (instead of semantic similarity search).
 * Scrape new rune URLs on marketplace frontpage and update db.
-* Notification for block height pass
+* Notification for block height pass.
 ## Separate ideas
-* Scraping for sheets integration
-* Scraping and storing for later data analysis and modeling
+* Scraping for sheets integration.
+* Scraping and storing for later data analysis and modeling.
