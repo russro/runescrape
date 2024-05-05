@@ -11,7 +11,7 @@ from datetime import datetime
 
 # CONFIG VARS
 DATABASE = "rune_prices.json"
-ELEMENTS_PER_PAGE = 20
+ELEMENTS_PER_PAGE = 10
 SELECTORS = [
     f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
     for x in range(ELEMENTS_PER_PAGE)
@@ -45,6 +45,17 @@ def rune_name_or_url_standardizer(rune_name_or_url: str) -> str:
 
     return rune_name_standardized
 
+def rune_name_standardized_to_url(rune_name_standardized: str) -> str:
+    """Converts standardized rune name to UniSat URL.
+
+    >>> rune_name_standardized_to_url("rsic.genesis.rune")
+    "https://unisat.io/runes/market?tick=RSIC•GENESIS•RUNE"
+    """
+    ticker = rune_name_standardized.replace(".", "•").upper()
+    url = f"https://unisat.io/runes/market?tick={ticker}"
+
+    return url
+
 async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, elements_per_page: int = ELEMENTS_PER_PAGE):
     """Extracts price data from first page of UniSat rune.
     """
@@ -68,39 +79,34 @@ async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, ele
     
     return elements
 
-def new_json(file_path: str = DATABASE):
+def new_db(file_path: str = DATABASE):
     """Create empty json file.
     """
     with open(file_path, 'w') as outfile:
         json.dump({}, outfile)
 
-def read_json(file_path: str = DATABASE):
-    """Read and return contents of json file.
+def read_db(file_path: str = DATABASE):
+    """Read and return contents of json file. Create new json if it does not exist.
     """
     try:
         with open(file_path, 'r') as file:
             data = json.load(file)
     except:
-        new_json(file_path)
+        new_db(file_path)
         with open(file_path, 'r') as file:
             data = json.load(file)
     return data
 
-def write_json(file_path: str, data = DATABASE):
+def write_db(file_path: str, data = DATABASE):
     """Write to json file.
     """
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
-def read_curr_entries(url: str, price_elements: List[float] = None, file_path: str = DATABASE):
-    """Read database and return updated dictionary (without updating the db).
+def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = DATABASE):
+    """Update database and return updated entries.
     """
-    # Create new file if it does not exist.
-    if not os.path.exists(file_path):
-        new_json(file_path)
-
-    # Read and update file
-    entries = read_json(file_path)
+    entries = read_db(file_path)
 
     name = url_to_ticker(url)
     curr_time_checked = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -127,13 +133,7 @@ def read_curr_entries(url: str, price_elements: List[float] = None, file_path: s
 
     entries.update(to_add) # update dictionary
 
-    return entries
-
-def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = DATABASE):
-    """Update database and return updated entries.
-    """
-    entries = read_curr_entries(url, price_elements, file_path)
-    write_json(file_path, entries)
+    write_db(file_path, entries)
 
     return entries
 
