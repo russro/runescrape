@@ -67,6 +67,11 @@ updated!
 !schedule
 >>> Database gets updated every X mins. The next update will be at 03:14 PM.
 ```
+## !help
+```
+!help
+>>> ... # prints from help.md
+```
 # Conditional functions
 ## Every X hours
 ```
