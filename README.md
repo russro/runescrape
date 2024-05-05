@@ -1,5 +1,6 @@
-# Callable functions
-## !add
+# Discord Commands
+## Callable Commands
+### !add
 ```
 !add satoshi.nakamoto
 >>> Adding rune to database...
@@ -13,7 +14,7 @@
 >>> Adding rune to database...
 >>> Rune either lacks enough entries or does not exist on UniSat.
 ```
-## !status
+### !status
 ```
 !status
 >>> # Runes Prices
@@ -30,7 +31,7 @@
 
 **Note**: If you would like to update the database, send "!update" or "!update [RUNE_NAME]".
 ```
-## !update
+### !update
 ```
 !update
 >>> Scraping UniSat...
@@ -45,19 +46,19 @@ updated!
 
 *Note*: If you meant to update SAT●N (instead of SATOSHI●NAKAMOTO), please add the specific rune by sending "!add [RUNE_NAME]".
 ```
-## !schedule
+### !schedule
 ```
 !schedule
 >>> Database gets updated every X mins. The next update will be at 03:14 PM.
 ```
-## !help
+### !help
 ```
 !help
 >>> ... # prints from help.md
 ```
 
-# Conditional functions
-## Every X hours
+## Conditional Functions
+### Every X hours
 ```
 >>> # Runes Prices
 ## Last updated: 03:14 PM Friday, May 03, 2024
@@ -65,7 +66,7 @@ updated!
 
 **WADDLE●WADDLE●PENGU**: X sats or $Y per token | $Z per A tokens
 ```
-## Price movements
+### Price movements
 ```
 >>> # Price up! We're so back.
 **SATOSHI●NAKAMOTO** is up 10.47% in the last hour at X sats or $Y per token | $Z per A tokens (previously X_prev sats or $Y_prev per token | $Z_prev per A tokens).
