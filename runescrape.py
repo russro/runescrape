@@ -8,12 +8,30 @@ from typing import List
 from datetime import datetime
 
 
+# CONFIG VARS
 ELEMENTS_PER_PAGE = 20
 SELECTORS = [
     f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
     for x in range(ELEMENTS_PER_PAGE)
 ]
 
+
+def url_to_ticker(url):
+    name = re.findall(r"tick=([^&]*)", url)[0] # regex pattern to match ticker
+    return name
+
+def rune_string_standardizer(rune_name_input: str) -> str:
+    """Converts rune name string to standard format.
+
+    >>> rune_string_standardizer("RSIC•GENESIS•RUNE")
+    "rsic.genesis.rune"
+    """
+    try:
+        rune_name_standardized = rune_name_input.replace("%E2%80%A2", ".").replace("•", ".").lower()
+    except Exception as e:
+        return e
+
+    return rune_name_standardized
 
 async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, elements_per_page: int = ELEMENTS_PER_PAGE):
     """Extracts price data from first page of UniSat rune.
@@ -62,9 +80,7 @@ def write_json(file_path: str, data):
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
-def url_to_ticker(url):
-    name = re.findall(r"(?<=tick=).*", url)[0] # regex pattern to match ticker
-    return name
+
 
 def read_curr_entries(url: str, price_elements: List[float] = None, file_path: str = "rune_prices.json"):
     """Read database and return updated dictionary (without updating the db).

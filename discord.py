@@ -7,15 +7,27 @@ import nest_asyncio
 import validators
 import runescrape
 
+from discord.ext import commands
+
 
 nest_asyncio.apply()
 
 intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
-client = discord.Client(intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents)
 access_token = os.getenv('DISCORD_TOKEN')
 
+
+@bot.command()
+async def add(ctx, rune_name_or_url):
+    rune_name = runescrape.url_to_ticker(rune_name_or_url) if validators.url(rune_name_or_url) else rune_name_or_url
+    rune_name_standardized = runescrape.rune_string_standardizer(rune_name)
+    ... # check db
+    ... # if rune exists in db, say so and return the last updated entry
+    ... # if rune does not exist in db, scrape
+    ... # if scrape fails, say so and return
+    ... # if scrape succeeds, add to db and return the updated entry
 
 def call_prices(url: str):
     """Scrapes prices from UniSat URL; returns prices for tokens without updating db.
