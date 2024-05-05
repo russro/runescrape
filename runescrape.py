@@ -10,7 +10,8 @@ from datetime import datetime
 
 
 # CONFIG VARS
-DATABASE = "rune_prices.json"
+PRICE_DATABASE = "rune_prices.json"
+NICKNAME_DATABASE = "rune_nicknames.json"
 ELEMENTS_PER_PAGE = 10
 SELECTORS = [
     f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
@@ -56,7 +57,7 @@ def rune_name_standardized_to_url(rune_name_standardized: str) -> str:
 
     return url
 
-async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, elements_per_page: int = ELEMENTS_PER_PAGE):
+async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, elements_per_page: int = ELEMENTS_PER_PAGE) -> List[float]:
     """Extracts price data from first page of UniSat rune.
     """
     async with async_playwright() as p:
@@ -69,23 +70,27 @@ async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, ele
 
         # Extract and assign all price elements in page
         for i, selector in enumerate(selectors):
-            await page.wait_for_selector(selector) # wait for the element in the page to fully load
-            element_text = await page.inner_text(selector) # extract to float
-            processed_element = float(re.sub("[^0-9.]", "", element_text))
+            try:
+                await page.wait_for_selector(selector) # wait for the element in the page to fully load
+                element_text = await page.inner_text(selector) # extract to float
+                processed_element = float(re.sub("[^0-9.]", "", element_text))
 
-            elements[i] = processed_element # Assign in ascending order
+                elements[i] = processed_element # Assign in ascending order
+            except Exception as e:
+                await browser.close() # TODO: check if this is necessary
+                return e
 
         await browser.close()
     
     return elements
 
-def new_db(file_path: str = DATABASE):
+def new_db(file_path: str):
     """Create empty json file.
     """
     with open(file_path, 'w') as outfile:
         json.dump({}, outfile)
 
-def read_db(file_path: str = DATABASE):
+def read_db(file_path: str):
     """Read and return contents of json file. Create new json if it does not exist.
     """
     try:
@@ -97,13 +102,13 @@ def read_db(file_path: str = DATABASE):
             data = json.load(file)
     return data
 
-def write_db(file_path: str, data = DATABASE):
+def write_db(file_path: str, data):
     """Write to json file.
     """
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
-def update_db_entries(url: str, price_elements: List[float] = None, file_path: str = DATABASE):
+def update_db_entries(url: str, file_path: str, price_elements: List[float] = None):
     """Update database and return updated entries.
     """
     entries = read_db(file_path)
