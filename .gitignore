@@ -1,4 +1,5 @@
 __pycache__/
 scratch/
+rune_nicknames.json
 rune_prices.json
 .env
