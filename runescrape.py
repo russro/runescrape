@@ -5,7 +5,8 @@ import re
 import validators
 
 from playwright.async_api import async_playwright
-from typing import List
+from playwright.async_api import Page, Browser
+from typing import List, Union, Callable
 from datetime import datetime
 
 
@@ -19,6 +20,7 @@ SELECTORS = [
 ]
 
 
+# TODO: consolidate functions into class
 def url_to_ticker(unisat_url):
     """Extracts rune ticker name from specific rune UniSat URL.
     """
@@ -57,8 +59,35 @@ def rune_name_standardized_to_url(rune_name_standardized: str) -> str:
 
     return url
 
-async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, elements_per_page: int = ELEMENTS_PER_PAGE) -> List[float]:
-    """Extracts price data from first page of UniSat rune.
+# TODO: consolidate functions into class
+async def extract_prices(selectors: List[int], page: Page) -> List[float]:
+    """Extract price elements from UniSat rune marketplace page.
+    """
+    elements = [0]*len(selectors) # preallocate price elements to save
+
+    for i, selector in enumerate(selectors):
+        try:
+            await page.wait_for_selector(selector) # wait for the element in the page to fully load
+            element_text = await page.inner_text(selector) # extract to float
+            processed_element = float(re.sub("[^0-9.]", "", element_text))
+
+            elements[i] = processed_element # Assign in ascending order
+        except Exception as e:
+            # await browser.close() # TODO: check if this is necessary
+            return e
+        
+    return elements
+
+async def extract_mint_amount(selectors: List[int], page: Page) -> List[int]:
+    """Extracts mint amount for a specified rune from UniSat rune detail page.
+    """
+    return
+
+    return elements
+
+async def extract_elements(url: str, extract_func: Callable[[List[int], Page], List[Union[int, float]]],
+                           selectors: List[str] = SELECTORS, ) -> List[float]:
+    """Extracts elements using specified extract function.
     """
     async with async_playwright() as p:
         # Open and go to URL
@@ -66,25 +95,13 @@ async def extract_price_elements(url: str, selectors: List[str] = SELECTORS, ele
         page = await browser.new_page()
         await page.goto(url)
         
-        elements = [0]*elements_per_page # preallocate price elements to save
-
-        # Extract and assign all price elements in page
-        for i, selector in enumerate(selectors):
-            try:
-                await page.wait_for_selector(selector) # wait for the element in the page to fully load
-                element_text = await page.inner_text(selector) # extract to float
-                processed_element = float(re.sub("[^0-9.]", "", element_text))
-
-                elements[i] = processed_element # Assign in ascending order
-            except Exception as e:
-                await browser.close() # TODO: check if this is necessary
-                return e
+        elements = extract_func(selectors, page)
 
         await browser.close()
     
     return elements
 
-# TODO: convert all functions below into a single class within its own file
+# TODO: consolidate functions into class within its own file
 def new_json(file_path: str):
     """Create empty json file.
     """
@@ -125,6 +142,7 @@ def update_db_entries(unisat_url: str, file_path: str, price_elements: List[floa
     to_add = {
         rune_name_standardized: {
             'url': rune_url_standardized,
+            'tokens_per_mint': 0, # TODO: replace the 0
             'price_array': [],
             'price_timestamps': []
         }
