@@ -16,6 +16,7 @@ from runescrape import PRICE_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST
 # Config variables
 PRICE_DATABASE_PATH = os.getenv('PRICE_DATABASE_PATH')
 NICKNAME_DATABASE_PATH = os.getenv('NICKNAME_DATABASE_PATH')
+BOT_CHANNEL_ID = 1232761629549265006
 
 # Enable nested asyncio calls
 nest_asyncio.apply()
@@ -190,8 +191,12 @@ async def status(ctx, rune_name_or_url: str = None):
         await ctx.send(msg)
         return
     
-@tasks.loop(seconds=5*60+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
+@tasks.loop(seconds=5
+        # seconds=1*30+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
+)
 async def schedule_update_db():
+    msg_channel = bot.get_channel(BOT_CHANNEL_ID)
+    await msg_channel.send("Updating...")
     entries = runescrape.read_json(PRICE_DATABASE_PATH) # load db
 
     # Configure vars
@@ -204,9 +209,18 @@ async def schedule_update_db():
     extract_func_list = [runescrape.extract_prices]*rune_cnt
     selectors_list = [PRICE_SELECTOR_LIST]*rune_cnt
     
-    runescrape.extract_elements()
+    price_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
+    runescrape.update_db_entries(prices_url_list=url_list,
+                                 file_path=PRICE_DATABASE_PATH,
+                                 price_elements_list=price_elements)
+    
+    await msg_channel.send("Updated.")
+    return
 
-
+@schedule_update_db.before_loop
+async def before():
+    await bot.wait_until_ready()
+    print("Finished waiting.")
 
 
 def scrape_disc_msg(url, entry):
@@ -222,6 +236,7 @@ def scrape_disc_msg(url, entry):
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
+    schedule_update_db.start()
 
 # @bot.event
 # async def on_message(message):
@@ -240,3 +255,4 @@ async def on_ready():
 
 if __name__ == "__main__":
     bot.run(access_token)
+    

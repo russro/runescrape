@@ -170,9 +170,9 @@ def write_json(file_path: str, data):
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
-def update_db_entries(prices_url: List[str],
+def update_db_entries(prices_url_list: List[str],
                       file_path: str,
-                      price_elements: List[List[float]] = None,
+                      price_elements_list: List[List[float]] = None,
                       mint_amt_element: int = 1,
                       price_array_len: int = PRICE_ARRAY_LEN) -> None:
     """Update database and return updated entries.
@@ -180,7 +180,7 @@ def update_db_entries(prices_url: List[str],
     # Load price db
     entries = read_json(file_path)
 
-    for i, url in enumerate(prices_url):
+    for i, url in enumerate(prices_url_list):
         # Extract standardized name and standardized url
         rune_name_standardized = rune_name_standardizer(prices_url_to_ticker(url))
         rune_url_standardized = rune_name_std_to_prices_url(rune_name_standardized)
@@ -201,7 +201,7 @@ def update_db_entries(prices_url: List[str],
             mint_amt_element = entries[rune_name_standardized]['tokens_per_mint']
         except:
             mint_amt_element = mint_amt_element
-        price_array.append(price_elements[i][0])
+        price_array.append(price_elements_list[i][0])
         price_timestamps.append(curr_time)
         if len(price_array) > price_array_len:
             price_array.pop(0)
