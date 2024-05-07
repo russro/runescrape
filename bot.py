@@ -151,24 +151,32 @@ async def status(ctx, rune_name_or_url: str = None):
             # Skip 'last_updated'
             if rune_name_std == 'last_updated':
                 continue
-
+            
+            # Configure vars to print
             ticker = runescrape.rune_name_std_to_ticker(rune_name_std)
             curr_price_sats = rune_data['price_array'][-1]
             curr_price_usd = round(sats_to_usd(curr_price_sats), 4)
             tokens_per_mint = int(rune_data['tokens_per_mint'])
+
+            # Construct and add to msg
             sub_msg = (f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
-                       f" | ${round(tokens_per_mint*curr_price_usd, 2)} per {tokens_per_mint} tokens (tokens in a mint).\n\n")
+                       f" | ${round(tokens_per_mint*curr_price_usd, 2)} per mint ({tokens_per_mint} tokens per mint).\n\n")
             msg += sub_msg
 
         await ctx.send(msg)
         return
     else:
+        # Check for nickname
         rune_potential_nickname = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
         rune_name_standardized = rune_nickname_check_to_std(rune_potential_nickname)
+
+        # Configure vars to print
         ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
         curr_price_sats = entries[rune_name_standardized]['price_array'][-1]
         curr_price_usd = round(sats_to_usd(curr_price_sats), 4)
         tokens_per_mint = int(entries[rune_name_standardized]['tokens_per_mint'])
+
+        # Construct msg to send
         msg = (f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}**\n\n"
                f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
                f" | ${round(tokens_per_mint*curr_price_usd, 2)} per {tokens_per_mint} tokens (tokens in a mint).\n\n")
