@@ -14,6 +14,11 @@
 >>> Adding rune to database...
 >>> Rune either lacks enough entries or does not exist on UniSat.
 ```
+### !nickname
+```
+!nickname satoshi.nakamoto sn
+>>> **SATOSHI•NAKAMOTO** can now be referred as 'sn'.
+```
 ### !status
 ```
 !status
