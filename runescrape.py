@@ -3,16 +3,19 @@ import os
 import json
 import re
 import validators
+import random
+import asyncio
 
 from playwright.async_api import async_playwright
 from playwright.async_api import Page, Browser
-from typing import List, Union, Callable
+from typing import List, Tuple, Union, Callable
 from datetime import datetime
 
 
 # Config variables
 PRICE_DATABASE_PATH = os.getenv('PRICE_DATABASE_PATH')
 NICKNAME_DATABASE_PATH = os.getenv('NICKNAME_DATABASE_PATH')
+
 PRICE_ELEMENTS_PER_PAGE = 20
 PRICE_SELECTOR_LIST = [
     f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
@@ -99,7 +102,7 @@ async def extract_prices(selectors: List[int], page: Page) -> List[float]:
         
     return elements
 
-async def extract_mint_amount(selectors: List[int], page: Page) -> List[int]:
+async def extract_mint_amount(selectors: List[int], page: Page) -> List[float]:
     """Extracts mint amount for a specified rune from UniSat rune detail page.
     """
     
@@ -119,7 +122,8 @@ async def extract_mint_amount(selectors: List[int], page: Page) -> List[int]:
 
 async def extract_elements(url_list: List[str],
                            extract_func_list: List[Callable[[List[int], Page], List[Union[int, float]]]],
-                           selectors_list: List[List[str]]) -> List[float]:
+                           selectors_list: List[List[str]],
+                           url_wait: Tuple[float, float] = [0, 3]) -> List[List[Union[float]]]:
     """Extracts elements using specified extract function.
     """
     async with async_playwright() as p:
@@ -133,6 +137,8 @@ async def extract_elements(url_list: List[str],
             await page.goto(url)
             el = await extract_func_list[i](selectors_list[i], page)
             elements.append(el)
+            wait_time = random.uniform(url_wait[0], url_wait[1])
+            await asyncio.sleep(wait_time)
 
         await browser.close()
     
@@ -164,9 +170,9 @@ def write_json(file_path: str, data):
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
-def update_db_entries(prices_url: str,
+def update_db_entries(prices_url: List[str],
                       file_path: str,
-                      price_elements: List[float] = None,
+                      price_elements: List[List[float]] = None,
                       mint_amt_element: int = 1,
                       price_array_len: int = PRICE_ARRAY_LEN) -> None:
     """Update database and return updated entries.
@@ -174,40 +180,45 @@ def update_db_entries(prices_url: str,
     # Load price db
     entries = read_json(file_path)
 
-    # Extract standardized name and standardized url
-    rune_name_standardized = rune_name_standardizer(prices_url_to_ticker(prices_url))
-    rune_url_standardized = rune_name_std_to_prices_url(rune_name_standardized)
+    for i, url in enumerate(prices_url):
+        # Extract standardized name and standardized url
+        rune_name_standardized = rune_name_standardizer(prices_url_to_ticker(url))
+        rune_url_standardized = rune_name_std_to_prices_url(rune_name_standardized)
 
-    # Configure variables to store in db
-    curr_time = datetime.now().strftime("%I:%M:%S %p, %m/%d/%Y")
+        # Configure variables to store in db
+        curr_time = datetime.now().strftime("%I:%M:%S %p, %m/%d/%Y")
 
-    # Update prices and timestamps
-    try:
-        price_array = entries['price_array']
-    except:
-        price_array = []
-    try:
-        price_timestamps = entries['price_timestamps']
-    except:
-        price_timestamps = []
-    price_array.append(price_elements[0])
-    price_timestamps.append(curr_time)
-    if len(price_array) > PRICE_ARRAY_LEN:
-        price_array.pop(0)
-        price_timestamps.pop(0)
+        # Update prices and timestamps
+        try:
+            price_array = entries[rune_name_standardized]['price_array']
+        except:
+            price_array = []
+        try:
+            price_timestamps = entries[rune_name_standardized]['price_timestamps']
+        except:
+            price_timestamps = []
+        try:
+            mint_amt_element = entries[rune_name_standardized]['tokens_per_mint']
+        except:
+            mint_amt_element = mint_amt_element
+        price_array.append(price_elements[i][0])
+        price_timestamps.append(curr_time)
+        if len(price_array) > price_array_len:
+            price_array.pop(0)
+            price_timestamps.pop(0)
 
 
-    to_add = {
-        'last_updated': curr_time,
-        rune_name_standardized: {
-            'url': rune_url_standardized,
-            'tokens_per_mint': mint_amt_element, # TODO: replace the 0
-            'price_array': price_array,
-            'price_timestamps': price_timestamps
+        to_add = {
+            'last_updated': curr_time,
+            rune_name_standardized: {
+                'url': rune_url_standardized,
+                'tokens_per_mint': mint_amt_element, # TODO: replace the 0
+                'price_array': price_array,
+                'price_timestamps': price_timestamps
+            }
         }
-    }
-    
-    entries.update(to_add) # update dictionary
+
+        entries.update(to_add) # update dictionary
 
     write_json(file_path, entries)
 

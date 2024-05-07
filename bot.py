@@ -1,6 +1,7 @@
 
 import os
 import time
+import random
 import requests
 import bot
 import asyncio
@@ -8,7 +9,7 @@ import nest_asyncio
 import discord
 import runescrape
 
-from discord.ext import commands
+from discord.ext import commands, tasks
 from runescrape import PRICE_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST
 
 
@@ -79,9 +80,9 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
         mint_amt = 1
 
     # Add scraped data to db
-    runescrape.update_db_entries(prices_url=prices_url,
+    runescrape.update_db_entries(prices_url=[prices_url],
                                  file_path=PRICE_DATABASE_PATH,
-                                 price_elements=prices,
+                                 price_elements=[prices],
                                  mint_amt_element=mint_amt)
 
     await ctx.send(f"**{ticker}** added!")
@@ -131,6 +132,13 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
 
     return
 
+def rune_status_msg(ticker, curr_price_sats, curr_price_usd, tokens_per_mint) -> str:
+    """Generate message to send for rune status.
+    """
+    msg = (f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
+           f" | ${round(tokens_per_mint*curr_price_usd, 2)} per mint ({tokens_per_mint} tokens per mint).\n\n")
+    return msg
+
 @bot.command()
 async def status(ctx, rune_name_or_url: str = None):
     entries = runescrape.read_json(PRICE_DATABASE_PATH)
@@ -155,12 +163,11 @@ async def status(ctx, rune_name_or_url: str = None):
             # Configure vars to print
             ticker = runescrape.rune_name_std_to_ticker(rune_name_std)
             curr_price_sats = rune_data['price_array'][-1]
-            curr_price_usd = round(sats_to_usd(curr_price_sats), 4)
+            curr_price_usd = sats_to_usd(curr_price_sats)
             tokens_per_mint = int(rune_data['tokens_per_mint'])
 
             # Construct and add to msg
-            sub_msg = (f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
-                       f" | ${round(tokens_per_mint*curr_price_usd, 2)} per mint ({tokens_per_mint} tokens per mint).\n\n")
+            sub_msg = rune_status_msg(ticker, curr_price_sats, curr_price_usd, tokens_per_mint)
             msg += sub_msg
 
         await ctx.send(msg)
@@ -173,17 +180,33 @@ async def status(ctx, rune_name_or_url: str = None):
         # Configure vars to print
         ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
         curr_price_sats = entries[rune_name_standardized]['price_array'][-1]
-        curr_price_usd = round(sats_to_usd(curr_price_sats), 4)
+        curr_price_usd = sats_to_usd(curr_price_sats)
         tokens_per_mint = int(entries[rune_name_standardized]['tokens_per_mint'])
 
         # Construct msg to send
-        msg = (f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}**\n\n"
-               f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
-               f" | ${round(tokens_per_mint*curr_price_usd, 2)} per {tokens_per_mint} tokens (tokens in a mint).\n\n")
+        msg = f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}**\n\n"
+        msg += rune_status_msg(ticker, curr_price_sats, curr_price_usd, tokens_per_mint)
         
         await ctx.send(msg)
         return
     
+@tasks.loop(seconds=5*60+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
+async def schedule_update_db():
+    entries = runescrape.read_json(PRICE_DATABASE_PATH) # load db
+
+    # Configure vars
+    rune_names = list(entries.keys())
+    rune_names.remove('last_updated') # skip 'last_updated'
+    rune_cnt = len(rune_names)
+    url_list = [0]*len(rune_names)
+    for i, name in enumerate(rune_names):
+        url_list[i] = entries[name]['url']
+    extract_func_list = [runescrape.extract_prices]*rune_cnt
+    selectors_list = [PRICE_SELECTOR_LIST]*rune_cnt
+    
+    runescrape.extract_elements()
+
+
 
 
 def scrape_disc_msg(url, entry):
