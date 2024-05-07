@@ -270,7 +270,7 @@ async def schedule_price_mvmt_check():
                                    f"({tokens_per_mint} tokens per mint).\n\n")
         elif percent_change < -PERCENT_THRESHOLD:
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
-            await msg_channel.send("# Price down. It's over... :pepehands:\n"
+            await msg_channel.send("# Price down. It's over... <:pepehands:1237539581532966992>\n"
                                    f"__{ticker}__ is down **{abs(percent_change)}%** within the last hour "
                                    f"at {curr_price_sats} sats or **${curr_price_usd}** per token | "
                                    f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint "
