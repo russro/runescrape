@@ -10,13 +10,20 @@ import discord
 import runescrape
 
 from discord.ext import commands, tasks
-from runescrape import PRICE_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST
+from runescrape import PRICE_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST, PRICE_ARRAY_LEN
 
 
 # Config variables
 PRICE_DATABASE_PATH = os.getenv('PRICE_DATABASE_PATH')
 NICKNAME_DATABASE_PATH = os.getenv('NICKNAME_DATABASE_PATH')
 BOT_CHANNEL_ID = 1232761629549265006
+PERCENT_THRESHOLD = 10
+
+# Global variables
+try:
+    PRICE_MVMT_LAST_CHECKED = runescrape.read_json(PRICE_DATABASE_PATH)['last_updated']
+except:
+    PRICE_MVMT_LAST_CHECKED = "04:20:69 PM, 04/20/2000"
 
 # Enable nested asyncio calls
 nest_asyncio.apply()
@@ -81,9 +88,9 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
         mint_amt = 1
 
     # Add scraped data to db
-    runescrape.update_db_entries(prices_url=[prices_url],
+    runescrape.update_db_entries(prices_url_list=[prices_url],
                                  file_path=PRICE_DATABASE_PATH,
-                                 price_elements=[prices],
+                                 price_elements_list=[prices],
                                  mint_amt_element=mint_amt)
 
     await ctx.send(f"**{ticker}** added!")
@@ -136,8 +143,8 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
 def rune_status_msg(ticker, curr_price_sats, curr_price_usd, tokens_per_mint) -> str:
     """Generate message to send for rune status.
     """
-    msg = (f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
-           f" | ${round(tokens_per_mint*curr_price_usd, 2)} per mint ({tokens_per_mint} tokens per mint).\n\n")
+    msg = (f"__{ticker}__: {curr_price_sats} sats or **${curr_price_usd}** per token"
+           f" | **${round(tokens_per_mint*curr_price_usd, 2)}** per mint ({tokens_per_mint} tokens per mint).\n\n")
     return msg
 
 @bot.command()
@@ -153,7 +160,7 @@ async def status(ctx, rune_name_or_url: str = None):
         entries = runescrape.read_json(PRICE_DATABASE_PATH)
 
         # Configure header of msg
-        msg = f"# Runes Prices\n**Last updated: {entries['last_updated']}**\n\n"
+        msg = f"# Runes Prices\n**Last updated: {entries['last_updated']}** (updates every ~5 mins)\n\n"
 
         # Loop through db and construct msg iteratively
         for rune_name_std, rune_data in entries.items():
@@ -185,18 +192,14 @@ async def status(ctx, rune_name_or_url: str = None):
         tokens_per_mint = int(entries[rune_name_standardized]['tokens_per_mint'])
 
         # Construct msg to send
-        msg = f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}**\n\n"
+        msg = f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}** (updates every ~5 mins)\n\n"
         msg += rune_status_msg(ticker, curr_price_sats, curr_price_usd, tokens_per_mint)
         
         await ctx.send(msg)
         return
     
-@tasks.loop(seconds=5
-        # seconds=1*30+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
-)
+@tasks.loop(seconds=5*60+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
 async def schedule_update_db():
-    msg_channel = bot.get_channel(BOT_CHANNEL_ID)
-    await msg_channel.send("Updating...")
     entries = runescrape.read_json(PRICE_DATABASE_PATH) # load db
 
     # Configure vars
@@ -214,43 +217,78 @@ async def schedule_update_db():
                                  file_path=PRICE_DATABASE_PATH,
                                  price_elements_list=price_elements)
     
-    await msg_channel.send("Updated.")
     return
 
 @schedule_update_db.before_loop
-async def before():
+async def schedule_update_before():
     await bot.wait_until_ready()
-    print("Finished waiting.")
+    print("Database schedule update function ready.")
 
+@tasks.loop(seconds=60)
+async def schedule_price_mvmt_check():
+    entries = runescrape.read_json(PRICE_DATABASE_PATH)
 
-def scrape_disc_msg(url, entry):
-    """Turn singular entry into a Discord-readable message.
-    """
-    ticker = runescrape.url_to_ticker(url)
-    lowest_sats = entry[ticker]['curr_lowest_price']
-    discmsg = (f"**{ticker}** is currently priced at **{lowest_sats} sats** per token"
-               f" or **${sats_to_usd(lowest_sats)} USD** per token.")
+    # Declare global var from config var
+    global PRICE_MVMT_LAST_CHECKED
 
-    return discmsg
+    # Return if already checked
+    if PRICE_MVMT_LAST_CHECKED == entries['last_updated']:
+        return
+
+    # Update time checked
+    PRICE_MVMT_LAST_CHECKED = entries['last_updated']
+
+    # Check all runes for significant price mvmts
+    for rune_name, rune_data in entries.items():
+        # Skip 'last_updated'
+        if rune_name == 'last_updated':
+            continue
+        
+        # Extract prices for particular rune
+        price_array = rune_data['price_array']
+
+        # Get ticker name
+        ticker = runescrape.rune_name_std_to_ticker(rune_name)
+
+        # Skip if not enough data 
+        if len(price_array) < PRICE_ARRAY_LEN:
+            continue
+
+        # Check for larger than PERCENT_THRESHOLD change
+        old_price_sats = price_array[0]
+        curr_price_sats = price_array[-1]
+        curr_price_usd = sats_to_usd(curr_price_sats)
+        tokens_per_mint = int(rune_data['tokens_per_mint'])
+        percent_change = ((curr_price_sats-old_price_sats)/old_price_sats)*100
+
+        # Send message for respective direction change
+        if percent_change > PERCENT_THRESHOLD:
+            msg_channel = bot.get_channel(BOT_CHANNEL_ID)
+            await msg_channel.send("# Price up! We're so back.\n"
+                                   f"__{ticker}__ is up {abs(percent_change)}% within the last hour "
+                                   f"at {curr_price_sats} sats or ${curr_price_usd} per token | "
+                                   f"${round(tokens_per_mint*curr_price_usd, 2)} per mint "
+                                   f"({tokens_per_mint} tokens per mint).")
+        elif percent_change < -PERCENT_THRESHOLD:
+            msg_channel = bot.get_channel(BOT_CHANNEL_ID)
+            await msg_channel.send("# Price down. It's over... :pepehands:\n"
+                                   f"__{ticker}__ is down {abs(percent_change)}% within the last hour "
+                                   f"at {curr_price_sats} sats or ${curr_price_usd} per token | "
+                                   f"${round(tokens_per_mint*curr_price_usd, 2)} per mint "
+                                   f"({tokens_per_mint} tokens per mint).")
+
+    return
+
+@schedule_price_mvmt_check.before_loop
+async def schedule_mvmt_check_before():
+    await bot.wait_until_ready()
+    print("Price movement check function ready.")
 
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
     schedule_update_db.start()
-
-# @bot.event
-# async def on_message(message):
-#     if message.author == bot.user:
-#         return
-
-#     if message.content.startswith('!scrape'):
-#         url = message.content.replace('!scrape','').replace(' ','') # parse args from Discord message
-#         if validators.url(url):
-#             await message.channel.send('Scraping... Please wait.')
-#             curr_entries = call_prices(url)
-#             await message.channel.send(scrape_disc_msg(url, curr_entries))
-#         else:
-#             await message.channel.send("Input must be of form '!scrape [URL]'.")
+    schedule_price_mvmt_check.start()
 
 
 if __name__ == "__main__":
