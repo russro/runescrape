@@ -4,7 +4,6 @@ import requests
 import bot
 import asyncio
 import nest_asyncio
-import validators
 import discord
 import runescrape
 
@@ -29,6 +28,8 @@ access_token = os.getenv('DISCORD_TOKEN')
 
 @bot.command()
 async def test(ctx, *,arg):
+    """Discord test command.
+    """
     await ctx.channel.send(arg)
 
 @bot.command()
@@ -51,7 +52,7 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
 
     # Check db if rune already exists; if so, return
     if rune_name_standardized in rune_prices:
-        await ctx.send(f"{ticker} already added.")
+        await ctx.send(f"**{ticker}** already added.")
         ... # TODO: send last updated entry
         return
     
@@ -75,9 +76,6 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
     # If mint amt scrape fails, set to one
     if isinstance(mint_amt, Exception):
         mint_amt = 1
-    
-    print(prices)
-    print(mint_amt)
 
     # Add scraped data to db
     runescrape.update_db_entries(prices_url=prices_url,
@@ -85,7 +83,9 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
                                  price_elements=prices,
                                  mint_amt_element=mint_amt)
 
-    await ctx.send(f"{ticker} added!")
+    await ctx.send(f"**{ticker}** added!")
+
+    return
 
 @bot.command()
 async def status(ctx, rune_name_or_url: str = None):
@@ -93,27 +93,44 @@ async def status(ctx, rune_name_or_url: str = None):
         ...
         return
     else:
-        rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
+        rune_potential_nickname = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
+        rune_name_standardized = rune_nickname_check_to_std(rune_potential_nickname)
         ... # open db
         ... # send 
         return
 
-
-def call_prices(url: str):
-    """Scrapes prices from UniSat URL; returns prices for tokens without updating db.
+def rune_nickname_check_to_std(potential_nickname: str) -> str:
+    """Check for nickname and replace to standard rune name.
     """
-    price_elements = asyncio.run(runescrape.extract_price_elements(url)) # scrape price data at time
-    curr_entries = runescrape.read_curr_entries(url, price_elements)
+    nicknames = runescrape.read_json(file_path=NICKNAME_DATABASE_PATH)
+    if rune_name_standardized in nicknames:
+        rune_name_standardized = nicknames[potential_nickname]
+    
+    return rune_name_standardized
 
-    return curr_entries
-
-def call_save_prices(url: str):
-    """Scrapes prices from UniSat URL; updates db and returns prices for tokens.
+@bot.command()
+async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
+    """Add nickname to existing rune.
     """
-    price_elements = asyncio.run(runescrape.extract_price_elements(url)) # scrape price data at time
-    updated_entries = runescrape.update_db_entries(url, price_elements) # update database
+    # Check db for rune
+    rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
+    ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
+    entries = runescrape.read_json(PRICE_DATABASE_PATH)
+    if rune_name_standardized not in entries:
+        await ctx.send(f"**{ticker}** not found in database.\n\n"
+                       "Please input '!add [RUNE_NAME_OR_URL]' to add the rune to the database.")
+        return
 
-    return updated_entries
+    # Add nickname to nicknames db
+    nickname_db = runescrape.read_json(NICKNAME_DATABASE_PATH)
+    nickname_db.update({rune_name_standardized: rune_nickname})
+    runescrape.write_json(NICKNAME_DATABASE_PATH, nickname_db)
+    
+    await ctx.send(f"**{ticker}** can now be referred as '{rune_nickname}'.")
+
+    return
+
+
 
 def sats_to_usd(sats):
     """Convert sats to USD.

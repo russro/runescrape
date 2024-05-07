@@ -198,6 +198,7 @@ def update_db_entries(prices_url: str,
 
 
     to_add = {
+        'last_updated': curr_time,
         rune_name_standardized: {
             'url': rune_url_standardized,
             'tokens_per_mint': mint_amt_element, # TODO: replace the 0
