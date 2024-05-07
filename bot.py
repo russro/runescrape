@@ -97,6 +97,40 @@ def sats_to_usd(sats):
     # return round(sats * sats_to_usd_rate, 2)
     return sats * sats_to_usd_rate
 
+def rune_nickname_check_to_std(potential_nickname: str) -> str:
+    """Check for nickname and replace to standard rune name.
+    """
+    nicknames = runescrape.read_json(file_path=NICKNAME_DATABASE_PATH)
+    try:
+        if potential_nickname in nicknames:
+            rune_name_standardized = nicknames[potential_nickname]
+    except:
+        rune_name_standardized = potential_nickname
+    
+    return rune_name_standardized
+
+@bot.command()
+async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
+    """Add nickname to existing rune.
+    """
+    # Check db for rune
+    rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
+    ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
+    entries = runescrape.read_json(PRICE_DATABASE_PATH)
+    if rune_name_standardized not in entries:
+        await ctx.send(f"**{ticker}** not found in database.\n\n"
+                       "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
+        return
+
+    # Add nickname to nicknames db
+    nickname_db = runescrape.read_json(NICKNAME_DATABASE_PATH)
+    nickname_db.update({rune_nickname: rune_name_standardized})
+    runescrape.write_json(NICKNAME_DATABASE_PATH, nickname_db)
+    
+    await ctx.send(f"**{ticker}** can now be referred as '{rune_nickname}'.")
+
+    return
+
 @bot.command()
 async def status(ctx, rune_name_or_url: str = None):
     entries = runescrape.read_json(PRICE_DATABASE_PATH)
@@ -120,10 +154,10 @@ async def status(ctx, rune_name_or_url: str = None):
 
             ticker = runescrape.rune_name_std_to_ticker(rune_name_std)
             curr_price_sats = rune_data['price_array'][-1]
-            curr_price_usd = round(sats_to_usd(curr_price_sats), 5)
+            curr_price_usd = round(sats_to_usd(curr_price_sats), 4)
             tokens_per_mint = int(rune_data['tokens_per_mint'])
             sub_msg = (f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
-                       f" | ${round(tokens_per_mint*curr_price_usd, 2)} per {tokens_per_mint} tokens\n\n")
+                       f" | ${round(tokens_per_mint*curr_price_usd, 2)} per {tokens_per_mint} tokens (tokens in a mint).\n\n")
             msg += sub_msg
 
         await ctx.send(msg)
@@ -131,43 +165,17 @@ async def status(ctx, rune_name_or_url: str = None):
     else:
         rune_potential_nickname = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
         rune_name_standardized = rune_nickname_check_to_std(rune_potential_nickname)
-        ... # open db
-        ... # send 
+        ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
+        curr_price_sats = entries[rune_name_standardized]['price_array'][-1]
+        curr_price_usd = round(sats_to_usd(curr_price_sats), 4)
+        tokens_per_mint = int(entries[rune_name_standardized]['tokens_per_mint'])
+        msg = (f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}**\n\n"
+               f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
+               f" | ${round(tokens_per_mint*curr_price_usd, 2)} per {tokens_per_mint} tokens (tokens in a mint).\n\n")
+        
+        await ctx.send(msg)
         return
-
-def rune_nickname_check_to_std(potential_nickname: str) -> str:
-    """Check for nickname and replace to standard rune name.
-    """
-    nicknames = runescrape.read_json(file_path=NICKNAME_DATABASE_PATH)
-    if rune_name_standardized in nicknames:
-        rune_name_standardized = nicknames[potential_nickname]
     
-    return rune_name_standardized
-
-@bot.command()
-async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
-    """Add nickname to existing rune.
-    """
-    # Check db for rune
-    rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
-    ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
-    entries = runescrape.read_json(PRICE_DATABASE_PATH)
-    if rune_name_standardized not in entries:
-        await ctx.send(f"**{ticker}** not found in database.\n\n"
-                       "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
-        return
-
-    # Add nickname to nicknames db
-    nickname_db = runescrape.read_json(NICKNAME_DATABASE_PATH)
-    nickname_db.update({rune_name_standardized: rune_nickname})
-    runescrape.write_json(NICKNAME_DATABASE_PATH, nickname_db)
-    
-    await ctx.send(f"**{ticker}** can now be referred as '{rune_nickname}'.")
-
-    return
-
-
-
 
 
 def scrape_disc_msg(url, entry):
