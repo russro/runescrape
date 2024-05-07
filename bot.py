@@ -1,5 +1,6 @@
 
 import os
+import time
 import requests
 import bot
 import asyncio
@@ -40,7 +41,7 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
 
     # Return if command input lacks
     if rune_name_or_url is None:
-        await ctx.send("Input must be of form '!add [RUNE_NAME_OR_URL]'.")
+        await ctx.send("Input must be of form `!add [RUNE_NAME_OR_URL]`.")
         return
     
     # Standardize rune name/url
@@ -87,10 +88,45 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
 
     return
 
+def sats_to_usd(sats):
+    """Convert sats to USD.
+    """
+    response = requests.get('https://api.coindesk.com/v1/bpi/currentprice.json')
+    # time.sleep() # TODO: consider this if I am getting timed out
+    sats_to_usd_rate = response.json()['bpi']['USD']['rate_float'] / 100000000
+    # return round(sats * sats_to_usd_rate, 2)
+    return sats * sats_to_usd_rate
+
 @bot.command()
 async def status(ctx, rune_name_or_url: str = None):
+    entries = runescrape.read_json(PRICE_DATABASE_PATH)
+
+    if not entries:
+        await ctx.send("Database is empty!\n\n"
+                       "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
+        return
+
     if rune_name_or_url is None:
-        ...
+        entries = runescrape.read_json(PRICE_DATABASE_PATH)
+
+        # Configure header of msg
+        msg = f"# Runes Prices\n**Last updated: {entries['last_updated']}**\n\n"
+
+        # Loop through db and construct msg iteratively
+        for rune_name_std, rune_data in entries.items():
+            # Skip 'last_updated'
+            if rune_name_std == 'last_updated':
+                continue
+
+            ticker = runescrape.rune_name_std_to_ticker(rune_name_std)
+            curr_price_sats = rune_data['price_array'][-1]
+            curr_price_usd = round(sats_to_usd(curr_price_sats), 5)
+            tokens_per_mint = int(rune_data['tokens_per_mint'])
+            sub_msg = (f"**{ticker}**: {curr_price_sats} sats or ${curr_price_usd} per token"
+                       f" | ${round(tokens_per_mint*curr_price_usd, 2)} per {tokens_per_mint} tokens\n\n")
+            msg += sub_msg
+
+        await ctx.send(msg)
         return
     else:
         rune_potential_nickname = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
@@ -118,7 +154,7 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
     entries = runescrape.read_json(PRICE_DATABASE_PATH)
     if rune_name_standardized not in entries:
         await ctx.send(f"**{ticker}** not found in database.\n\n"
-                       "Please input '!add [RUNE_NAME_OR_URL]' to add the rune to the database.")
+                       "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
         return
 
     # Add nickname to nicknames db
@@ -132,12 +168,7 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
 
 
 
-def sats_to_usd(sats):
-    """Convert sats to USD.
-    """
-    response = requests.get('https://api.coindesk.com/v1/bpi/currentprice.json')
-    sats_to_usd_rate = response.json()['bpi']['USD']['rate_float'] / 100000000
-    return round(sats * sats_to_usd_rate, 2)
+
 
 def scrape_disc_msg(url, entry):
     """Turn singular entry into a Discord-readable message.

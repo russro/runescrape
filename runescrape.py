@@ -179,7 +179,7 @@ def update_db_entries(prices_url: str,
     rune_url_standardized = rune_name_std_to_prices_url(rune_name_standardized)
 
     # Configure variables to store in db
-    curr_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    curr_time = datetime.now().strftime("%H:%M:%S, %Y-%m-%d")
 
     # Update prices and timestamps
     try:
