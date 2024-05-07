@@ -1,16 +1,16 @@
 
 import os
-import discord
+import bot
 import asyncio
 import nest_asyncio
 nest_asyncio.apply()
 
 from playwright.async_api import async_playwright
 
-intents = discord.Intents.default()
+intents = bot.Intents.default()
 intents.messages = True
 intents.message_content = True
-client = discord.Client(intents=intents)
+client = bot.Client(intents=intents)
 
 access_token = os.getenv('DISCORD_TOKEN')
 
