@@ -10,9 +10,7 @@ import runescrape
 
 from discord.ext import commands, tasks
 from runescrape import PRICE_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST, PRICE_ARRAY_LEN
-from listen import listen
 
-listen()
 
 # Config variables
 PRICE_DATABASE_PATH = os.getenv('PRICE_DATABASE_PATH')
