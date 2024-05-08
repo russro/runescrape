@@ -139,10 +139,10 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
 
     return
 
-def rune_status_msg(ticker, curr_price_sats, curr_price_usd, tokens_per_mint) -> str:
+def rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint) -> str:
     """Generate message to send for rune status.
     """
-    msg = (f"__{ticker}__:\n{curr_price_sats} sats per token\n**${curr_price_usd}** per token\n"
+    msg = (f"{curr_price_sats} sats per token\n**${round(curr_price_usd, 6)}** per token\n"
            f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint ({tokens_per_mint} tokens per mint)\n\n")
     return msg
 
@@ -174,7 +174,7 @@ async def status(ctx, rune_name_or_url: str = None):
             tokens_per_mint = int(rune_data['tokens_per_mint'])
 
             # Construct and add to msg
-            sub_msg = rune_status_msg(ticker, curr_price_sats, curr_price_usd, tokens_per_mint)
+            sub_msg = f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint)}"
             msg += sub_msg
 
         await ctx.send(msg)
@@ -192,7 +192,7 @@ async def status(ctx, rune_name_or_url: str = None):
 
         # Construct msg to send
         msg = f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}** (updates every ~5 mins)\n\n"
-        msg += rune_status_msg(ticker, curr_price_sats, curr_price_usd, tokens_per_mint)
+        msg += f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint)}"
         
         await ctx.send(msg)
         return
@@ -225,6 +225,7 @@ async def schedule_update_before():
 
 @tasks.loop(seconds=60)
 async def schedule_price_mvmt_check():
+    # Load db
     entries = runescrape.read_json(PRICE_DATABASE_PATH)
 
     # Declare global var from config var
@@ -243,15 +244,24 @@ async def schedule_price_mvmt_check():
         if rune_name == 'last_updated':
             continue
         
-        # Extract prices for particular rune
-        price_array = rune_data['price_array']
+        # Skip entries that have been updated within the hour
+        try:
+            last_notified = rune_data['last_notified']
+        except:
+            last_notified = -1 # holder value that should never be in the checked array
+        if last_notified in rune_data['price_timestamps']:
+            continue
 
-        # Get ticker name
-        ticker = runescrape.rune_name_std_to_ticker(rune_name)
+        # Extract prices particular rune
+        price_array = rune_data['price_array']
 
         # Skip if not enough data 
         if len(price_array) < PRICE_ARRAY_LEN:
             continue
+        
+        # Extract timestamps, ticker for particular rune
+        timestamp_array = rune_data['price_timestamps']
+        ticker = runescrape.rune_name_std_to_ticker(rune_name)
 
         # Check for larger than PERCENT_THRESHOLD change
         old_price_sats = price_array[0]
@@ -262,19 +272,30 @@ async def schedule_price_mvmt_check():
 
         # Send message for respective direction change
         if percent_change > PERCENT_THRESHOLD:
+            # Update db with last_notified to prevent overnotifying channel
+            to_add = {'last_notified': timestamp_array[-1]}
+            entries[rune_name].update(to_add)
+            runescrape.write_json(PRICE_DATABASE_PATH, entries)
+
+            # Send price change msg
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
             await msg_channel.send("# Price up! We're so back.\n"
-                                   f"__{ticker}__ is up **{abs(percent_change)}%** within the last hour:\n"
-                                   f"{curr_price_sats} sats per token\n**${curr_price_usd}** per token\n"
-                                   f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint "
-                                   f"({tokens_per_mint} tokens per mint)\n\n<@&{1237541939562287164}>\n\n")
+                                   f"**__{ticker}__ is up {round(abs(percent_change),2)}%** within the last hour:\n"
+                                   f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint)}"
+                                   f"<@&{1237541939562287164}>\n\n")
+            
         elif percent_change < -PERCENT_THRESHOLD:
+            # Update db with last_notified to prevent overnotifying channel
+            to_add = {'last_notified': timestamp_array[-1]}
+            entries[rune_name].update(to_add)
+            runescrape.write_json(PRICE_DATABASE_PATH, entries)
+
+            # Send price change msg
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
             await msg_channel.send("# Price down. It's over... <:pepehands:1237539581532966992>\n"
-                                   f"__{ticker}__ is down **{abs(percent_change)}%** within the last hour:\n"
-                                   f"{curr_price_sats} sats per token\n**${curr_price_usd}** per token\n"
-                                   f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint "
-                                   f"({tokens_per_mint} tokens per mint)\n\n<@&{1237541939562287164}>\n\n")
+                                   f"**__{ticker}__ is down {round(abs(percent_change),2)}%** within the last hour:\n"
+                                   f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint)}"
+                                   f"<@&{1237541939562287164}>\n\n")
 
     return
 
@@ -287,6 +308,7 @@ async def schedule_mvmt_check_before():
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
     schedule_update_db.start()
+    await asyncio.sleep(5)
     schedule_price_mvmt_check.start()
 
 

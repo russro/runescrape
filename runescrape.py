@@ -206,7 +206,10 @@ def update_db_entries(prices_url_list: List[str],
         if len(price_array) > price_array_len:
             price_array.pop(0)
             price_timestamps.pop(0)
-
+        try:
+            last_notified = entries[rune_name_standardized]['last_notified']
+        except:
+            last_notified = -1 # holder value that should never be in the checked array
 
         to_add = {
             'last_updated': curr_time,
@@ -214,7 +217,8 @@ def update_db_entries(prices_url_list: List[str],
                 'url': rune_url_standardized,
                 'tokens_per_mint': mint_amt_element, # TODO: replace the 0
                 'price_array': price_array,
-                'price_timestamps': price_timestamps
+                'price_timestamps': price_timestamps,
+                'last_notified': last_notified
             }
         }
 
