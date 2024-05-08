@@ -3,4 +3,5 @@ scratch/
 rune_nicknames.json
 rune_prices.json
 test_prices.json
+fly.toml
 .env
