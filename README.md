@@ -101,3 +101,4 @@ updated!
 ## Separate ideas
 * Scraping for sheets integration.
 * Scraping and storing for later data analysis and modeling.
+* Roles mentioning for specific tokens when prices change instead of reminding everyone of all price changes.
