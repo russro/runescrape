@@ -203,7 +203,10 @@ async def schedule_update_db():
 
     # Configure vars
     rune_names = list(entries.keys())
-    rune_names.remove('last_updated') # skip 'last_updated'
+    try:
+        rune_names.remove('last_updated') # skip 'last_updated'
+    except:
+        pass
     rune_cnt = len(rune_names)
     url_list = [0]*len(rune_names)
     for i, name in enumerate(rune_names):
