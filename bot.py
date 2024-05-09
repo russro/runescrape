@@ -241,6 +241,8 @@ async def schedule_price_mvmt_check():
     # Update time checked
     PRICE_MVMT_LAST_CHECKED = entries['last_updated']
 
+    print("Checking for price movements...")
+
     # Check all runes for significant price mvmts
     for rune_name, rune_data in entries.items():
         # Skip 'last_updated'
