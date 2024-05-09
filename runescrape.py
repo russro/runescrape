@@ -98,6 +98,7 @@ async def extract_prices(selectors: List[int], page: Page) -> List[float]:
             elements[i] = processed_element # Assign in ascending order
         except Exception as e:
             # await browser.close() # TODO: check if this is necessary
+            print(e)
             return e
         
     return elements
@@ -116,6 +117,7 @@ async def extract_mint_amount(selectors: List[int], page: Page) -> List[float]:
         element = processed_element # Assign in ascending order
     except Exception as e:
         # await browser.close() # TODO: check if this is necessary
+        print(e)
         return e
 
     return element
@@ -135,6 +137,7 @@ async def extract_elements(url_list: List[str],
 
         for i, url in enumerate(url_list):
             await page.goto(url)
+            print(f"Scraping {url}...")
             el = await extract_func_list[i](selectors_list[i], page)
             elements.append(el)
             wait_time = random.uniform(url_wait[0], url_wait[1])
