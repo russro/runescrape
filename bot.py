@@ -207,10 +207,10 @@ async def schedule_update_db():
         rune_names.remove('last_updated') # skip 'last_updated'
     except:
         pass
-    rune_cnt = len(rune_names)
     url_list = [0]*len(rune_names)
     for i, name in enumerate(rune_names):
         url_list[i] = entries[name]['url']
+    rune_cnt = len(rune_names)
     extract_func_list = [runescrape.extract_prices]*rune_cnt
     selectors_list = [PRICE_SELECTOR_LIST]*rune_cnt
     
