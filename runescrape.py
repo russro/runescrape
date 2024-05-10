@@ -125,7 +125,7 @@ async def extract_mint_amount(selectors: List[int], page: Page) -> List[float]:
 async def extract_elements(url_list: List[str],
                            extract_func_list: List[Callable[[List[int], Page], List[Union[int, float]]]],
                            selectors_list: List[List[str]],
-                           url_wait: Tuple[float, float] = [1, 5]) -> List[List[Union[float]]]:
+                           url_wait: Tuple[float, float] = [2, 5]) -> List[List[Union[float]]]:
     """Extracts elements using specified extract function.
     """
     async with async_playwright() as p:
