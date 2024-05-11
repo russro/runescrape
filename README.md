@@ -96,7 +96,7 @@ updated!
 * Refer to contents below section 'Discord Commands'.
 ## Future features
 * Maybe add a new db for nickname storage and search (instead of semantic similarity search).
-* Scrape new rune URLs on marketplace frontpage and update db.
+* Scrape new rune URLs on marketplace and notify channel of potentially interesting runes to add.
 * Notification for block height pass.
 ## Separate ideas
 * Scraping for sheets integration.
