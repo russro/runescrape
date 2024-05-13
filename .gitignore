@@ -1,5 +1,7 @@
 __pycache__/
 scratch/
+oauth/
+keys/
 rune_nicknames.json
 rune_prices.json
 test_prices.json
