@@ -1,9 +1,9 @@
+
 """
 Before using this script, please follow the instructions
 at https://docs.gspread.org/en/latest/oauth2.html
 to enable gspread to edit the specified sheet.
 """
-
 
 import schedule
 import time
