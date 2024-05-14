@@ -5,6 +5,7 @@ import gspread
 
 from runescrape import rune_name_standardizer, read_json
 from runescrape import PRICE_DATABASE_PATH
+from bot import sats_to_usd
 
 
 SHEETS_URL = r"https://docs.google.com/spreadsheets/d/1NGot3Ks3fbJL3ZRF7yCRSfBsqNKIjPXJWYMAftRkUgU/edit#gid=1484089764"
@@ -32,7 +33,8 @@ def main():
     runes_corresponding_prices = [0]*len(rune_names_std) # preallocate array
     for i, name in enumerate(rune_names_std):
         try:
-            runes_corresponding_prices[i] = [runes_db[name]['price_array'][-1]]
+            token_price_usd = sats_to_usd(runes_db[name]['price_array'][-1])
+            runes_corresponding_prices[i] = [token_price_usd]
         except KeyError:
             runes_corresponding_prices[i] = ['RUNE NOT FOUND IN DB']
         except Exception as e:
