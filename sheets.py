@@ -56,5 +56,8 @@ schedule.every().minute.do(main)
 
 if __name__ == "__main__":
     while True:
-        schedule.run_pending()
+        try:
+            schedule.run_pending()
+        except Exception as e:
+            print(e)
         time.sleep(1)
