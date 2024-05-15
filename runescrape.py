@@ -210,7 +210,7 @@ def update_db_entries(prices_url_list: List[str],
         try:
             price_array.append(price_elements_list[i][0])
         except TypeError:
-            price_array.append(price_array[-1])
+            price_array.append(price_array[-1] + 0.000000001)
 
         price_timestamps.append(curr_time)
         if len(price_array) > price_array_len:
