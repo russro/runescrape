@@ -52,7 +52,7 @@ def main():
     
     return
 
-schedule.every().minute.do(main)
+schedule.every(2.5).minutes.do(main)
 
 if __name__ == "__main__":
     while True:
