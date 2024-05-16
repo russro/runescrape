@@ -95,15 +95,14 @@ async def extract_prices(selectors: List[int], page: Page) -> List[float]:
             element_text = await page.inner_text(selector) # extract to float
             processed_element = float(re.sub("[^0-9.]", "", element_text))
 
-            elements[i] = processed_element # Assign in ascending order
+            elements[i] = processed_element # assign in ascending order
         except Exception as e:
-            # await browser.close() # TODO: check if this is necessary
             print(e)
             return e
         
     return elements
 
-async def extract_mint_amount(selectors: List[int], page: Page) -> List[float]:
+async def extract_mint_amount(selectors: List[int], page: Page) -> float:
     """Extracts mint amount for a specified rune from UniSat rune detail page.
     """
     
@@ -114,9 +113,8 @@ async def extract_mint_amount(selectors: List[int], page: Page) -> List[float]:
         element_text = await page.inner_text(selector) # extract to float
         processed_element = float(re.sub("[^0-9.]", "", element_text))
 
-        element = processed_element # Assign in ascending order
+        element = processed_element
     except Exception as e:
-        # await browser.close() # TODO: check if this is necessary
         print(e)
         return e
 
@@ -125,7 +123,7 @@ async def extract_mint_amount(selectors: List[int], page: Page) -> List[float]:
 async def extract_elements(url_list: List[str],
                            extract_func_list: List[Callable[[List[int], Page], List[Union[int, float]]]],
                            selectors_list: List[List[str]],
-                           url_wait: Tuple[float, float] = [2, 5]) -> List[List[Union[float]]]:
+                           url_wait: Tuple[float, float] = [2, 5]) -> List[Union[List[float], float]]:
     """Extracts elements using specified extract function.
     """
     async with async_playwright() as p:
@@ -136,7 +134,13 @@ async def extract_elements(url_list: List[str],
         elements = []
 
         for i, url in enumerate(url_list):
-            await page.goto(url)
+            # If the URL times out, append the TimeoutError object
+            try:
+                await page.goto(url)
+            except Exception as e:
+                elements.append(e)
+                continue # no need to asyncio.sleep since program took long
+            
             print(f"Scraping {url}...")
             el = await extract_func_list[i](selectors_list[i], page)
             elements.append(el)
