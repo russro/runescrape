@@ -177,8 +177,8 @@ async def status(ctx, rune_name_or_url: str = None):
             volume = rune_data['volume']
 
             # Construct and add to msg
-            sub_msg = f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd,
-                                                        tokens_per_mint, volume)}"
+            sub_msg = (f"__{ticker}__:\n"
+                       f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}")
             msg += sub_msg
 
         await ctx.send(msg)
