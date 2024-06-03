@@ -16,7 +16,7 @@ from datetime import datetime
 PRICE_DATABASE_PATH = os.getenv('PRICE_DATABASE_PATH')
 NICKNAME_DATABASE_PATH = os.getenv('NICKNAME_DATABASE_PATH')
 
-PRICE_ELEMENTS_PER_PAGE = 20
+PRICE_ELEMENTS_PER_PAGE = 1
 PRICE_SELECTOR_LIST = [
     f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
     for x in range(PRICE_ELEMENTS_PER_PAGE)
@@ -24,6 +24,9 @@ PRICE_SELECTOR_LIST = [
 MINT_AMOUNT_SELECTOR_LIST = [
     "#__next > div.main-container.brc-20.brc-20-item-page.runes > div > div:nth-child(3) > div.ant-card-body > div > div.ml24.flex-column.gap-16 > div:nth-child(3) > div.font14.white085"
     ]
+VOLUME_SELECTOR_LIST = [
+    "#__next > div.main-container.runes.market > div.brc-20-market > div.mt32.flex-row-stretch.gap24 > div > div.runes-market-info-container.mt24 > div:nth-child(1) > div.flex-row-v-center.gap-4"
+]
 PRICE_ARRAY_LEN = 20
 
 
@@ -84,7 +87,7 @@ def rune_name_std_to_mint_amt_url(rune_name_standardized: str) -> str:
 
 
 # TODO: consolidate functions into class
-async def extract_prices(selectors: List[int], page: Page) -> List[float]:
+async def extract_prices_or_volume(selectors: List[int], page: Page) -> List[float]:
     """Extract price elements from UniSat rune marketplace page.
     """
     elements = [0]*len(selectors) # preallocate price elements to save
@@ -180,6 +183,7 @@ def write_json(file_path: str, data):
 def update_db_entries(prices_url_list: List[str],
                       file_path: str,
                       price_elements_list: List[List[float]] = None,
+                      volume_element: float = 1,
                       mint_amt_element: int = 1,
                       price_array_len: int = PRICE_ARRAY_LEN) -> None:
     """Update database and return updated entries.
@@ -209,6 +213,9 @@ def update_db_entries(prices_url_list: List[str],
         except:
             mint_amt_element = mint_amt_element
         
+        # Update volume
+        volume = volume_element
+        
         # Sometimes, a 'TimeoutError' object is assigned within price_elements_list.
         # If this happens, duplicate the previous value.
         try:
@@ -232,7 +239,8 @@ def update_db_entries(prices_url_list: List[str],
                 'tokens_per_mint': mint_amt_element, # TODO: replace the 0
                 'price_array': price_array,
                 'price_timestamps': price_timestamps,
-                'last_notified': last_notified
+                'last_notified': last_notified,
+                'volume': volume
             }
         }
 

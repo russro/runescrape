@@ -9,7 +9,8 @@ import discord
 import runescrape
 
 from discord.ext import commands, tasks
-from runescrape import PRICE_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST, PRICE_ARRAY_LEN
+from runescrape import PRICE_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST, VOLUME_SELECTOR_LIST
+from runescrape import PRICE_ARRAY_LEN
 
 
 # Config variables
@@ -139,11 +140,12 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
 
     return
 
-def rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint) -> str:
+def rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume) -> str:
     """Generate message to send for rune status.
     """
-    msg = (f"{curr_price_sats} sats per token\n**${round(curr_price_usd, 6)}** per token\n"
-           f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint ({tokens_per_mint} tokens per mint)\n\n")
+    msg = (f"**{curr_price_sats} sats** per token\n**${round(curr_price_usd, 6)}** per token\n"
+           f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint ({tokens_per_mint} tokens per mint)\n"
+           f"**{volume} BTC** volume (24h)\n\n")
     return msg
 
 @bot.command()
@@ -172,9 +174,11 @@ async def status(ctx, rune_name_or_url: str = None):
             curr_price_sats = rune_data['price_array'][-1]
             curr_price_usd = sats_to_usd(curr_price_sats)
             tokens_per_mint = int(rune_data['tokens_per_mint'])
+            volume = rune_data['volume']
 
             # Construct and add to msg
-            sub_msg = f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint)}"
+            sub_msg = f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd,
+                                                        tokens_per_mint, volume)}"
             msg += sub_msg
 
         await ctx.send(msg)
@@ -211,13 +215,15 @@ async def schedule_update_db():
     for i, name in enumerate(rune_names):
         url_list[i] = entries[name]['url']
     rune_cnt = len(rune_names)
-    extract_func_list = [runescrape.extract_prices]*rune_cnt
-    selectors_list = [PRICE_SELECTOR_LIST]*rune_cnt
+    extract_func_list = [runescrape.extract_prices_or_volume]*rune_cnt
+    selectors_list = [PRICE_SELECTOR_LIST.append(VOLUME_SELECTOR_LIST[0])]*rune_cnt
     
     price_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
+    price_elements, volume_element = price_elements[:-1], volume_element[-1][0]
     runescrape.update_db_entries(prices_url_list=url_list,
                                  file_path=PRICE_DATABASE_PATH,
-                                 price_elements_list=price_elements)
+                                 price_elements_list=price_elements,
+                                 volume_element=volume_element)
     
     return
 
