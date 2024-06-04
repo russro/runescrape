@@ -266,6 +266,7 @@ async def schedule_price_mvmt_check():
 
         # Extract prices particular rune
         price_array = rune_data['price_array']
+        volume = rune_data['volume']
 
         # Skip if not enough data 
         if len(price_array) < PRICE_ARRAY_LEN:
@@ -293,7 +294,7 @@ async def schedule_price_mvmt_check():
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
             await msg_channel.send("# Price up! We're so back.\n"
                                    f"**__{ticker}__ is up {round(abs(percent_change),2)}%** within the last hour:\n"
-                                   f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint)}"
+                                   f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}"
                                    f"<@&{1237541939562287164}>\n\n")
             
         elif percent_change < -PERCENT_THRESHOLD:
