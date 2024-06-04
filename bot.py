@@ -9,7 +9,7 @@ import discord
 import runescrape
 
 from discord.ext import commands, tasks
-from runescrape import PRICE_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST, VOLUME_SELECTOR_LIST
+from runescrape import PRICE_SELECTOR_LIST, PRICE_VOLUME_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST
 from runescrape import PRICE_ARRAY_LEN
 
 
@@ -216,14 +216,15 @@ async def schedule_update_db():
         url_list[i] = entries[name]['url']
     rune_cnt = len(rune_names)
     extract_func_list = [runescrape.extract_prices_or_volume]*rune_cnt
-    selectors_list = [PRICE_SELECTOR_LIST.append(VOLUME_SELECTOR_LIST[0])]*rune_cnt
-    
-    price_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
-    price_elements, volume_element = price_elements[:-1], volume_element[-1][0]
+    selectors_list = [PRICE_VOLUME_SELECTOR_LIST]*rune_cnt
+
+    price_volume_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
+    price_elements = [pair[0] for pair in price_volume_elements]
+    volume_elements = [pair[1] for pair in price_volume_elements]
     runescrape.update_db_entries(prices_url_list=url_list,
                                  file_path=PRICE_DATABASE_PATH,
                                  price_elements_list=price_elements,
-                                 volume_element=volume_element)
+                                 volume_elements_list=volume_elements)
     
     return
 

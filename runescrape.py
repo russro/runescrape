@@ -21,12 +21,14 @@ PRICE_SELECTOR_LIST = [
     f"#rc-tabs-0-panel-1 > div > div.trade-list > div:nth-child({x+1}) > div.content.display-domain.white > div.price-line > span.price"
     for x in range(PRICE_ELEMENTS_PER_PAGE)
     ]
+VOLUME_SELECTOR_LIST = [
+    "#__next > div.main-container.runes.market > div.brc-20-market > div.mt32.flex-row-stretch.gap24 > div > div.runes-market-info-container.mt24 > div:nth-child(1) > div.flex-row-v-center.gap-4"
+    ]
+PRICE_VOLUME_SELECTOR_LIST = PRICE_SELECTOR_LIST + VOLUME_SELECTOR_LIST
 MINT_AMOUNT_SELECTOR_LIST = [
     "#__next > div.main-container.brc-20.brc-20-item-page.runes > div > div:nth-child(3) > div.ant-card-body > div > div.ml24.flex-column.gap-16 > div:nth-child(3) > div.font14.white085"
     ]
-VOLUME_SELECTOR_LIST = [
-    "#__next > div.main-container.runes.market > div.brc-20-market > div.mt32.flex-row-stretch.gap24 > div > div.runes-market-info-container.mt24 > div:nth-child(1) > div.flex-row-v-center.gap-4"
-]
+
 PRICE_ARRAY_LEN = 20
 
 
@@ -183,7 +185,7 @@ def write_json(file_path: str, data):
 def update_db_entries(prices_url_list: List[str],
                       file_path: str,
                       price_elements_list: List[List[float]] = None,
-                      volume_element: float = 1,
+                      volume_elements_list: List[List[float]] = None,
                       mint_amt_element: int = 1,
                       price_array_len: int = PRICE_ARRAY_LEN) -> None:
     """Update database and return updated entries.
@@ -199,7 +201,7 @@ def update_db_entries(prices_url_list: List[str],
         # Configure variables to store in db
         curr_time = datetime.now().strftime("%I:%M:%S %p, %m/%d/%Y")
 
-        # Update prices and timestamps
+        # Update prices, volume, and timestamps
         try:
             price_array = entries[rune_name_standardized]['price_array']
         except:
@@ -213,13 +215,12 @@ def update_db_entries(prices_url_list: List[str],
         except:
             mint_amt_element = mint_amt_element
         
-        # Update volume
-        volume = volume_element
-        
+        volume = volume_elements_list[i]
+
         # Sometimes, a 'TimeoutError' object is assigned within price_elements_list.
         # If this happens, duplicate the previous value.
         try:
-            price_array.append(price_elements_list[i][0])
+            price_array.append(price_elements_list[i])
         except TypeError:
             price_array.append(price_array[-1] + 0.000000001)
 
