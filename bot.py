@@ -143,8 +143,8 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
 def rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume) -> str:
     """Generate message to send for rune status.
     """
-    msg = (f"**{volume} BTC** volume (24h)"
-           f"**{curr_price_sats} sats** per token\n**${round(curr_price_usd, 6)}** per token\n\n"
+    msg = (f"**{volume} BTC** volume (24h)\n"
+           f"**{curr_price_sats} sats** per token\n**${round(curr_price_usd, 6)}** per token\n"
            f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint ({tokens_per_mint} tokens per mint)\n\n")
     return msg
 
