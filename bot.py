@@ -143,9 +143,9 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
 def rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume) -> str:
     """Generate message to send for rune status.
     """
-    msg = (f"**{curr_price_sats} sats** per token\n**${round(curr_price_usd, 6)}** per token\n"
-           f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint ({tokens_per_mint} tokens per mint)\n"
-           f"**{volume} BTC** volume (24h)\n\n")
+    msg = (f"**{volume} BTC** volume (24h)"
+           f"**{curr_price_sats} sats** per token\n**${round(curr_price_usd, 6)}** per token\n\n"
+           f"**${round(tokens_per_mint*curr_price_usd, 2)}** per mint ({tokens_per_mint} tokens per mint)\n\n")
     return msg
 
 @bot.command()
@@ -196,7 +196,7 @@ async def status(ctx, rune_name_or_url: str = None):
 
         # Construct msg to send
         msg = f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}** (updates every ~5 mins)\n\n"
-        msg += f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint)}"
+        msg += f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}"
         
         await ctx.send(msg)
         return
