@@ -193,7 +193,7 @@ async def status(ctx, rune_name_or_url: str = None):
         curr_price_sats = entries[rune_name_standardized]['price_array'][-1]
         curr_price_usd = sats_to_usd(curr_price_sats)
         tokens_per_mint = int(entries[rune_name_standardized]['tokens_per_mint'])
-        volume = rune_data['volume']
+        volume = entries[rune_name_standardized]['volume']
 
         # Construct msg to send
         msg = f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}** (updates every ~5 mins)\n\n"
