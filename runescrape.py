@@ -214,11 +214,13 @@ def update_db_entries(prices_url_list: List[str],
             mint_amt_element = entries[rune_name_standardized]['tokens_per_mint']
         except:
             mint_amt_element = mint_amt_element
-        
-        volume = volume_elements_list[i]
 
         # Sometimes, a 'TimeoutError' object is assigned within price_elements_list.
         # If this happens, duplicate the previous value.
+        try:
+            volume = volume_elements_list[i]
+        except TypeError:
+            volume = entries[rune_name_standardized]['volume']
         try:
             price_array.append(price_elements_list[i])
         except TypeError:

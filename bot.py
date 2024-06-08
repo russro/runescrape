@@ -220,8 +220,18 @@ async def schedule_update_db():
     selectors_list = [PRICE_VOLUME_SELECTOR_LIST]*rune_cnt
 
     price_volume_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
-    price_elements = [pair[0] for pair in price_volume_elements]
-    volume_elements = [pair[1] for pair in price_volume_elements]
+    price_elements, volume_elements = [], []
+    for pair in price_volume_elements:
+        try:
+            price_elements.append(pair[0])
+            volume_elements.append(pair[1])
+        except: # Append TimeoutError if the pair var is unsubscriptable
+            price_elements.append(TimeoutError)
+            volume_elements.append(TimeoutError)
+    
+    # price_elements = [pair[0] for pair in price_volume_elements]
+    # volume_elements = [pair[1] for pair in price_volume_elements]
+
     runescrape.update_db_entries(prices_url_list=url_list,
                                  file_path=PRICE_DATABASE_PATH,
                                  price_elements_list=price_elements,
@@ -308,7 +318,7 @@ async def schedule_price_mvmt_check():
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
             await msg_channel.send("# Price down. It's over... <:pepehands:1237539581532966992>\n"
                                    f"**__{ticker}__ is down {round(abs(percent_change),2)}%** within the last hour:\n"
-                                   f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint)}"
+                                   f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}"
                                    f"<@&{1237541939562287164}>\n\n")
 
     return
