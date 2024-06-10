@@ -71,7 +71,7 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
     await ctx.send(prices_url)
     mint_amt_url = runescrape.rune_name_std_to_mint_amt_url(rune_name_standardized)
 
-    price_extractor, mint_amt_extractor = runescrape.extract_prices, runescrape.extract_mint_amount
+    price_extractor, mint_amt_extractor = runescrape.extract_prices_or_volume, runescrape.extract_mint_amount
     prices, mint_amt = asyncio.run(runescrape.extract_elements(
         url_list = [prices_url, mint_amt_url],
         extract_func_list = [price_extractor, mint_amt_extractor],
