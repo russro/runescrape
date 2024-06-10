@@ -221,6 +221,8 @@ def update_db_entries(prices_url_list: List[str],
             volume = volume_elements_list[i]
         except TypeError:
             volume = entries[rune_name_standardized]['volume']
+        except:
+            volume = 0
         try:
             price_array.append(price_elements_list[i])
         except TypeError:
