@@ -8,10 +8,12 @@ import nest_asyncio
 import discord
 import runescrape
 
+from dotenv import load_dotenv
 from discord.ext import commands, tasks
 from runescrape import PRICE_SELECTOR_LIST, PRICE_VOLUME_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST
 from runescrape import PRICE_ARRAY_LEN
 
+load_dotenv()
 
 # Config variables
 PRICE_DATABASE_PATH = os.getenv('PRICE_DATABASE_PATH')
