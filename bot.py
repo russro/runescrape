@@ -252,6 +252,12 @@ async def schedule_price_mvmt_check():
     # Declare global var from config var
     global PRICE_MVMT_LAST_CHECKED
 
+    # Skip if not updated
+    try:
+        entries['last_updated']
+    except KeyError:
+        return
+
     # Return if already checked
     if PRICE_MVMT_LAST_CHECKED == entries['last_updated']:
         return

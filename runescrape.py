@@ -225,10 +225,12 @@ def update_db_entries(prices_url_list: List[str],
             except:
                 volume = 0
         
+        # Resolve edge case of first scraped element being a list
         price = price_elements_list[i]
         price = price[0] if type(price) is list else price
+        
         try:
-            price_array.append(price_elements_list[i])
+            price_array.append(price)
         except TypeError:
             price_array.append(price_array[-1] + 0.000000001)
 
