@@ -259,7 +259,7 @@ def update_db_entries(prices_url_list: List[str],
 
     write_json(file_path, entries)
 
-    return
+    return entries
 
 
 

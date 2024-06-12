@@ -10,8 +10,11 @@ import runescrape
 
 from dotenv import load_dotenv
 from discord.ext import commands, tasks
+from sats_to_usd import sats_to_usd
 from runescrape import PRICE_SELECTOR_LIST, PRICE_VOLUME_SELECTOR_LIST, MINT_AMOUNT_SELECTOR_LIST
 from runescrape import PRICE_ARRAY_LEN
+from sheets import init_worksheet_and_runes, construct_runes_corresponding_prices, update_worksheet
+from sheets import SHEETS_URL
 
 load_dotenv()
 
@@ -98,15 +101,6 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
     await ctx.send(f"**{ticker}** added!")
 
     return
-
-def sats_to_usd(sats):
-    """Convert sats to USD.
-    """
-    response = requests.get('https://api.coindesk.com/v1/bpi/currentprice.json')
-    # time.sleep() # TODO: consider this if I am getting timed out
-    sats_to_usd_rate = response.json()['bpi']['USD']['rate_float'] / 100000000
-    # return round(sats * sats_to_usd_rate, 2)
-    return sats * sats_to_usd_rate
 
 def rune_nickname_check_to_std(potential_nickname: str) -> str:
     """Check for nickname and replace to standard rune name.
@@ -234,10 +228,16 @@ async def schedule_update_db():
     # price_elements = [pair[0] for pair in price_volume_elements]
     # volume_elements = [pair[1] for pair in price_volume_elements]
 
-    runescrape.update_db_entries(prices_url_list=url_list,
-                                 file_path=PRICE_DATABASE_PATH,
-                                 price_elements_list=price_elements,
-                                 volume_elements_list=volume_elements)
+    entries = runescrape.update_db_entries(prices_url_list=url_list,
+                                           file_path=PRICE_DATABASE_PATH,
+                                           price_elements_list=price_elements,
+                                           volume_elements_list=volume_elements)
+    
+    # Update spreadsheet
+    worksheet, rune_names_std = init_worksheet_and_runes(SHEETS_URL)
+    runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, entries)
+    print("Updating sheet...")
+    update_worksheet(rune_names_std, worksheet, runes_corresponding_prices)
     
     return
 
