@@ -26,9 +26,15 @@ PERCENT_THRESHOLD = 7.5
 
 # Global variables
 try:
-    PRICE_MVMT_LAST_CHECKED = runescrape.read_json(PRICE_DATABASE_PATH)['last_updated']
+    RUNES_DB = runescrape.read_json(PRICE_DATABASE_PATH)
+    PRICE_MVMT_LAST_CHECKED = RUNES_DB['last_updated']
 except:
+    RUNES_DB = {}
     PRICE_MVMT_LAST_CHECKED = "04:20:69 PM, 04/20/2000"
+try:
+    NICKNAMES_DB = runescrape.read_json(NICKNAME_DATABASE_PATH)
+except:
+    NICKNAMES_DB = {}
 
 # Enable nested asyncio calls
 nest_asyncio.apply()
@@ -63,10 +69,11 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
     ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
 
     # Load db
-    rune_prices = runescrape.read_json(file_path=PRICE_DATABASE_PATH)
+    # rune_prices = runescrape.read_json(file_path=PRICE_DATABASE_PATH)
+    global RUNES_DB
 
     # Check db if rune already exists; if so, return
-    if rune_name_standardized in rune_prices:
+    if rune_name_standardized in RUNES_DB:
         await ctx.send(f"**{ticker}** already added.")
         ... # TODO: send last updated entry
         return
@@ -93,10 +100,11 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
         mint_amt = 1
 
     # Add scraped data to db
-    runescrape.update_db_entries(prices_url_list=[prices_url],
-                                 file_path=PRICE_DATABASE_PATH,
-                                 price_elements_list=[prices],
-                                 mint_amt_element=mint_amt)
+    RUNES_DB = runescrape.update_db_entries(prices_url_list=[prices_url],
+                                            cached_db=RUNES_DB,
+                                            file_path=PRICE_DATABASE_PATH,
+                                            price_elements_list=[prices],
+                                            mint_amt_element=mint_amt)
 
     await ctx.send(f"**{ticker}** added!")
 
@@ -105,12 +113,13 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
 def rune_nickname_check_to_std(potential_nickname: str) -> str:
     """Check for nickname and replace to standard rune name.
     """
-    nicknames = runescrape.read_json(file_path=NICKNAME_DATABASE_PATH)
+    # nicknames = runescrape.read_json(file_path=NICKNAME_DATABASE_PATH)
+    global NICKNAMES_DB
+
     try:
-        if potential_nickname in nicknames:
-            rune_name_standardized = nicknames[potential_nickname]
-    except:
-        rune_name_standardized = potential_nickname
+        rune_name_standardized = NICKNAMES_DB[potential_nickname]
+    except Exception as e:
+        return e
     
     return rune_name_standardized
 
@@ -121,16 +130,19 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
     # Check db for rune
     rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
     ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
-    entries = runescrape.read_json(PRICE_DATABASE_PATH)
-    if rune_name_standardized not in entries:
+    # entries = runescrape.read_json(PRICE_DATABASE_PATH)
+    global RUNES_DB
+    
+    if rune_name_standardized not in RUNES_DB:
         await ctx.send(f"**{ticker}** not found in database.\n\n"
                        "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
         return
 
     # Add nickname to nicknames db
-    nickname_db = runescrape.read_json(NICKNAME_DATABASE_PATH)
-    nickname_db.update({rune_nickname: rune_name_standardized})
-    runescrape.write_json(NICKNAME_DATABASE_PATH, nickname_db)
+    # nickname_db = runescrape.read_json(NICKNAME_DATABASE_PATH)
+    global NICKNAMES_DB
+    NICKNAMES_DB.update({rune_nickname: rune_name_standardized})
+    runescrape.write_json(NICKNAME_DATABASE_PATH, NICKNAMES_DB)
     
     await ctx.send(f"**{ticker}** can now be referred as '{rune_nickname}'.")
 
@@ -146,21 +158,21 @@ def rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume) ->
 
 @bot.command()
 async def status(ctx, rune_name_or_url: str = None):
-    entries = runescrape.read_json(PRICE_DATABASE_PATH)
+    # entries = runescrape.read_json(PRICE_DATABASE_PATH)
+    global RUNES_DB
 
-    if not entries:
+    if not RUNES_DB:
         await ctx.send("Database is empty!\n\n"
                        "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
         return
 
     if rune_name_or_url is None:
-        entries = runescrape.read_json(PRICE_DATABASE_PATH)
 
         # Configure header of msg
-        msg = f"# Runes Prices\n**Last updated: {entries['last_updated']}** (updates every ~5 mins)\n\n"
+        msg = f"# Runes Prices\n**Last updated: {RUNES_DB['last_updated']}** (updates every ~5 mins)\n\n"
 
         # Loop through db and construct msg iteratively
-        for rune_name_std, rune_data in entries.items():
+        for rune_name_std, rune_data in RUNES_DB.items():
             # Skip 'last_updated'
             if rune_name_std == 'last_updated':
                 continue
@@ -183,38 +195,43 @@ async def status(ctx, rune_name_or_url: str = None):
         # Check for nickname
         rune_potential_nickname = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
         rune_name_standardized = rune_nickname_check_to_std(rune_potential_nickname)
+        if isinstance(rune_name_standardized, Exception):
+            await ctx.send('Nickname does not exist.')
+            return
 
         # Configure vars to print
         ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
-        curr_price_sats = entries[rune_name_standardized]['price_array'][-1]
+        curr_price_sats = RUNES_DB[rune_name_standardized]['price_array'][-1]
         curr_price_usd = sats_to_usd(curr_price_sats)
-        tokens_per_mint = int(entries[rune_name_standardized]['tokens_per_mint'])
-        volume = entries[rune_name_standardized]['volume']
+        tokens_per_mint = int(RUNES_DB[rune_name_standardized]['tokens_per_mint'])
+        volume = RUNES_DB[rune_name_standardized]['volume']
 
         # Construct msg to send
-        msg = f"**Last updated: {entries[rune_name_standardized]['price_timestamps'][-1]}** (updates every ~5 mins)\n\n"
+        msg = f"**Last updated: {RUNES_DB[rune_name_standardized]['price_timestamps'][-1]}** (updates every ~5 mins)\n\n"
         msg += f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}"
         
         await ctx.send(msg)
         return
     
-@tasks.loop(seconds=5*60+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
+@tasks.loop(seconds=5*60) # +random.uniform(-30,30)) # Check every 5 mins +/- 30 s
 async def schedule_update_db():
-    entries = runescrape.read_json(PRICE_DATABASE_PATH) # load db
+    # entries = runescrape.read_json(PRICE_DATABASE_PATH) # load db
+    global RUNES_DB
 
     # Configure vars
-    rune_names = list(entries.keys())
+    rune_names = list(RUNES_DB.keys())
     try:
         rune_names.remove('last_updated') # skip 'last_updated'
     except:
         pass
     url_list = [0]*len(rune_names)
     for i, name in enumerate(rune_names):
-        url_list[i] = entries[name]['url']
+        url_list[i] = RUNES_DB[name]['url']
     rune_cnt = len(rune_names)
     extract_func_list = [runescrape.extract_prices_or_volume]*rune_cnt
     selectors_list = [PRICE_VOLUME_SELECTOR_LIST]*rune_cnt
 
+    # Extract price and volume elements
     price_volume_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
     price_elements, volume_elements = [], []
     for pair in price_volume_elements:
@@ -224,18 +241,17 @@ async def schedule_update_db():
         except: # Append TimeoutError if the pair var is unsubscriptable
             price_elements.append(TimeoutError)
             volume_elements.append(TimeoutError)
-    
-    # price_elements = [pair[0] for pair in price_volume_elements]
-    # volume_elements = [pair[1] for pair in price_volume_elements]
 
-    entries = runescrape.update_db_entries(prices_url_list=url_list,
-                                           file_path=PRICE_DATABASE_PATH,
-                                           price_elements_list=price_elements,
-                                           volume_elements_list=volume_elements)
+    # Update cached db
+    RUNES_DB = runescrape.update_db_entries(prices_url_list=url_list,
+                                            cached_db=RUNES_DB,
+                                            file_path=PRICE_DATABASE_PATH,
+                                            price_elements_list=price_elements,
+                                            volume_elements_list=volume_elements)
     
     # Update spreadsheet
     worksheet, rune_names_std = init_worksheet_and_runes(SHEETS_URL)
-    runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, entries)
+    runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, RUNES_DB)
     print("Updating sheet...")
     update_worksheet(rune_names_std, worksheet, runes_corresponding_prices)
     
@@ -249,28 +265,29 @@ async def schedule_update_before():
 @tasks.loop(seconds=60)
 async def schedule_price_mvmt_check():
     # Load db
-    entries = runescrape.read_json(PRICE_DATABASE_PATH)
+    # entries = runescrape.read_json(PRICE_DATABASE_PATH)
+    global RUNES_DB
 
     # Declare global var from config var
     global PRICE_MVMT_LAST_CHECKED
 
     # Skip if not updated
     try:
-        entries['last_updated']
+        RUNES_DB['last_updated']
     except KeyError:
         return
 
     # Return if already checked
-    if PRICE_MVMT_LAST_CHECKED == entries['last_updated']:
+    if PRICE_MVMT_LAST_CHECKED == RUNES_DB['last_updated']:
         return
 
     # Update time checked
-    PRICE_MVMT_LAST_CHECKED = entries['last_updated']
+    PRICE_MVMT_LAST_CHECKED = RUNES_DB['last_updated']
 
     print("Checking for price movements...")
 
     # Check all runes for significant price mvmts
-    for rune_name, rune_data in entries.items():
+    for rune_name, rune_data in RUNES_DB.items():
         # Skip 'last_updated'
         if rune_name == 'last_updated':
             continue
@@ -306,8 +323,8 @@ async def schedule_price_mvmt_check():
         if percent_change > PERCENT_THRESHOLD:
             # Update db with last_notified to prevent overnotifying channel
             to_add = {'last_notified': timestamp_array[-1]}
-            entries[rune_name].update(to_add)
-            runescrape.write_json(PRICE_DATABASE_PATH, entries)
+            RUNES_DB[rune_name].update(to_add)
+            runescrape.write_json(PRICE_DATABASE_PATH, RUNES_DB)
 
             # Send price change msg
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
@@ -319,8 +336,8 @@ async def schedule_price_mvmt_check():
         elif percent_change < -PERCENT_THRESHOLD:
             # Update db with last_notified to prevent overnotifying channel
             to_add = {'last_notified': timestamp_array[-1]}
-            entries[rune_name].update(to_add)
-            runescrape.write_json(PRICE_DATABASE_PATH, entries)
+            RUNES_DB[rune_name].update(to_add)
+            # runescrape.write_json(PRICE_DATABASE_PATH, RUNES_DB) # no need to write to db
 
             # Send price change msg
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)

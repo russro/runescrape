@@ -183,6 +183,7 @@ def write_json(file_path: str, data):
         json.dump(data, file, indent=4)
 
 def update_db_entries(prices_url_list: List[str],
+                      cached_db: dict,
                       file_path: str,
                       price_elements_list: List[List[float]] = None,
                       volume_elements_list: List[List[float]] = None,
@@ -191,7 +192,8 @@ def update_db_entries(prices_url_list: List[str],
     """Update database and return updated entries.
     """
     # Load price db
-    entries = read_json(file_path)
+    # entries = read_json(file_path)
+    entries = cached_db
 
     for i, url in enumerate(prices_url_list):
         # Extract standardized name and standardized url
