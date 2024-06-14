@@ -45,6 +45,7 @@ intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 access_token = os.getenv('DISCORD_TOKEN')
+lock = asyncio.Lock()
 
 
 @bot.command()
@@ -70,13 +71,14 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
 
     # Load db
     # rune_prices = runescrape.read_json(file_path=PRICE_DATABASE_PATH)
-    global RUNES_DB
+    async with lock:
+        global RUNES_DB
 
-    # Check db if rune already exists; if so, return
-    if rune_name_standardized in RUNES_DB:
-        await ctx.send(f"**{ticker}** already added.")
-        ... # TODO: send last updated entry
-        return
+        # Check db if rune already exists; if so, return
+        if rune_name_standardized in RUNES_DB:
+            await ctx.send(f"**{ticker}** already added.")
+            ... # TODO: send last updated entry
+            return
     
     # Scrape web for rune; if rune scrape fails, return
     prices_url = runescrape.rune_name_std_to_prices_url(rune_name_standardized)
@@ -100,28 +102,29 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
         mint_amt = 1
 
     # Add scraped data to db
-    RUNES_DB = runescrape.update_db_entries(prices_url_list=[prices_url],
-                                            cached_db=RUNES_DB,
-                                            file_path=PRICE_DATABASE_PATH,
-                                            price_elements_list=[prices],
-                                            mint_amt_element=mint_amt)
+    async with lock:
+        RUNES_DB = runescrape.update_db_entries(prices_url_list=[prices_url],
+                                                cached_db=RUNES_DB,
+                                                file_path=PRICE_DATABASE_PATH,
+                                                price_elements_list=[prices],
+                                                mint_amt_element=mint_amt)
 
     await ctx.send(f"**{ticker}** added!")
 
     return
 
-def rune_nickname_check_to_std(potential_nickname: str) -> str:
+async def rune_nickname_check_to_std(potential_nickname: str) -> str:
     """Check for nickname and replace to standard rune name.
     """
-    # nicknames = runescrape.read_json(file_path=NICKNAME_DATABASE_PATH)
-    global NICKNAMES_DB
+    async with lock:
+        global NICKNAMES_DB
 
-    try:
-        rune_name_standardized = NICKNAMES_DB[potential_nickname]
-    except Exception as e:
-        return e
-    
-    return rune_name_standardized
+        try:
+            rune_name_standardized = NICKNAMES_DB[potential_nickname]
+        except Exception as e:
+            return e
+        
+        return rune_name_standardized
 
 @bot.command()
 async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
@@ -130,23 +133,24 @@ async def nickname(ctx, rune_name_or_url: str, rune_nickname: str):
     # Check db for rune
     rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
     ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
-    # entries = runescrape.read_json(PRICE_DATABASE_PATH)
-    global RUNES_DB
-    
-    if rune_name_standardized not in RUNES_DB:
-        await ctx.send(f"**{ticker}** not found in database.\n\n"
-                       "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
+
+    async with lock:
+        global RUNES_DB
+        
+        if rune_name_standardized not in RUNES_DB:
+            await ctx.send(f"**{ticker}** not found in database.\n\n"
+                        "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
+            return
+
+        # Add nickname to nicknames db
+        # nickname_db = runescrape.read_json(NICKNAME_DATABASE_PATH)
+        global NICKNAMES_DB
+        NICKNAMES_DB.update({rune_nickname: rune_name_standardized})
+        runescrape.write_json(NICKNAME_DATABASE_PATH, NICKNAMES_DB)
+        
+        await ctx.send(f"**{ticker}** can now be referred as '{rune_nickname}'.")
+
         return
-
-    # Add nickname to nicknames db
-    # nickname_db = runescrape.read_json(NICKNAME_DATABASE_PATH)
-    global NICKNAMES_DB
-    NICKNAMES_DB.update({rune_nickname: rune_name_standardized})
-    runescrape.write_json(NICKNAME_DATABASE_PATH, NICKNAMES_DB)
-    
-    await ctx.send(f"**{ticker}** can now be referred as '{rune_nickname}'.")
-
-    return
 
 def rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume) -> str:
     """Generate message to send for rune status.
@@ -158,111 +162,63 @@ def rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume) ->
 
 @bot.command()
 async def status(ctx, rune_name_or_url: str = None):
-    # entries = runescrape.read_json(PRICE_DATABASE_PATH)
-    global RUNES_DB
+    async with lock:
+        # entries = runescrape.read_json(PRICE_DATABASE_PATH)
+        global RUNES_DB
 
-    if not RUNES_DB:
-        await ctx.send("Database is empty!\n\n"
-                       "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
-        return
-
-    if rune_name_or_url is None:
-
-        # Configure header of msg
-        msg = f"# Runes Prices\n**Last updated: {RUNES_DB['last_updated']}** (updates every ~5 mins)\n\n"
-
-        # Loop through db and construct msg iteratively
-        for rune_name_std, rune_data in RUNES_DB.items():
-            # Skip 'last_updated'
-            if rune_name_std == 'last_updated':
-                continue
-            
-            # Configure vars to print
-            ticker = runescrape.rune_name_std_to_ticker(rune_name_std)
-            curr_price_sats = rune_data['price_array'][-1]
-            curr_price_usd = sats_to_usd(curr_price_sats)
-            tokens_per_mint = int(rune_data['tokens_per_mint'])
-            volume = rune_data['volume']
-
-            # Construct and add to msg
-            sub_msg = (f"__{ticker}__:\n"
-                       f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}")
-            msg += sub_msg
-
-        await ctx.send(msg)
-        return
-    else:
-        # Check for nickname
-        rune_potential_nickname = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
-        rune_name_standardized = rune_nickname_check_to_std(rune_potential_nickname)
-        if isinstance(rune_name_standardized, Exception):
-            await ctx.send('Nickname does not exist.')
+        if not RUNES_DB:
+            await ctx.send("Database is empty!\n\n"
+                        "Please input `!add [RUNE_NAME_OR_URL]` to add runes to the database.")
             return
 
-        # Configure vars to print
-        ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
-        curr_price_sats = RUNES_DB[rune_name_standardized]['price_array'][-1]
-        curr_price_usd = sats_to_usd(curr_price_sats)
-        tokens_per_mint = int(RUNES_DB[rune_name_standardized]['tokens_per_mint'])
-        volume = RUNES_DB[rune_name_standardized]['volume']
+        if rune_name_or_url is None:
 
-        # Construct msg to send
-        msg = f"**Last updated: {RUNES_DB[rune_name_standardized]['price_timestamps'][-1]}** (updates every ~5 mins)\n\n"
-        msg += f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}"
-        
-        await ctx.send(msg)
-        return
-    
-@tasks.loop(seconds=5*60) # +random.uniform(-30,30)) # Check every 5 mins +/- 30 s
-async def schedule_update_db():
-    # entries = runescrape.read_json(PRICE_DATABASE_PATH) # load db
-    global RUNES_DB
+            # Configure header of msg
+            msg = f"# Runes Prices\n**Last updated: {RUNES_DB['last_updated']}** (updates every ~5 mins)\n\n"
 
-    # Configure vars
-    rune_names = list(RUNES_DB.keys())
-    try:
-        rune_names.remove('last_updated') # skip 'last_updated'
-    except:
-        pass
-    url_list = [0]*len(rune_names)
-    for i, name in enumerate(rune_names):
-        url_list[i] = RUNES_DB[name]['url']
-    rune_cnt = len(rune_names)
-    extract_func_list = [runescrape.extract_prices_or_volume]*rune_cnt
-    selectors_list = [PRICE_VOLUME_SELECTOR_LIST]*rune_cnt
+            # Loop through db and construct msg iteratively
+            for rune_name_std, rune_data in RUNES_DB.items():
+                # Skip 'last_updated'
+                if rune_name_std == 'last_updated':
+                    continue
+                
+                # Configure vars to print
+                ticker = runescrape.rune_name_std_to_ticker(rune_name_std)
+                curr_price_sats = rune_data['price_array'][-1]
+                curr_price_usd = sats_to_usd(curr_price_sats)
+                tokens_per_mint = int(rune_data['tokens_per_mint'])
+                volume = rune_data['volume']
 
-    # Extract price and volume elements
-    price_volume_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
-    price_elements, volume_elements = [], []
-    for pair in price_volume_elements:
-        try:
-            price_elements.append(pair[0])
-            volume_elements.append(pair[1])
-        except: # Append TimeoutError if the pair var is unsubscriptable
-            price_elements.append(TimeoutError)
-            volume_elements.append(TimeoutError)
+                # Construct and add to msg
+                sub_msg = (f"__{ticker}__:\n"
+                        f"{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}")
+                msg += sub_msg
 
-    # Update cached db
-    RUNES_DB = runescrape.update_db_entries(prices_url_list=url_list,
-                                            cached_db=RUNES_DB,
-                                            file_path=PRICE_DATABASE_PATH,
-                                            price_elements_list=price_elements,
-                                            volume_elements_list=volume_elements)
-    
-    # Update spreadsheet
-    worksheet, rune_names_std = init_worksheet_and_runes(SHEETS_URL)
-    runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, RUNES_DB)
-    print("Updating sheet...")
-    update_worksheet(rune_names_std, worksheet, runes_corresponding_prices)
-    
-    return
+            await ctx.send(msg)
+            return
+        else:
+            # Check for nickname
+            rune_potential_nickname = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
+            rune_name_standardized = rune_nickname_check_to_std(rune_potential_nickname)
+            if isinstance(rune_name_standardized, Exception):
+                await ctx.send('Nickname does not exist.')
+                return
 
-@schedule_update_db.before_loop
-async def schedule_update_before():
-    await bot.wait_until_ready()
-    print("Database schedule update function ready.")
+            # Configure vars to print
+            ticker = runescrape.rune_name_std_to_ticker(rune_name_standardized)
+            curr_price_sats = RUNES_DB[rune_name_standardized]['price_array'][-1]
+            curr_price_usd = sats_to_usd(curr_price_sats)
+            tokens_per_mint = int(RUNES_DB[rune_name_standardized]['tokens_per_mint'])
+            volume = RUNES_DB[rune_name_standardized]['volume']
 
-@tasks.loop(seconds=60)
+            # Construct msg to send
+            msg = f"**Last updated: {RUNES_DB[rune_name_standardized]['price_timestamps'][-1]}** (updates every ~5 mins)\n\n"
+            msg += f"__{ticker}__:\n{rune_status_msg(curr_price_sats, curr_price_usd, tokens_per_mint, volume)}"
+            
+            await ctx.send(msg)
+            return
+
+# @tasks.loop(seconds=5*60)
 async def schedule_price_mvmt_check():
     # Load db
     # entries = runescrape.read_json(PRICE_DATABASE_PATH)
@@ -348,17 +304,71 @@ async def schedule_price_mvmt_check():
 
     return
 
-@schedule_price_mvmt_check.before_loop
-async def schedule_mvmt_check_before():
+@tasks.loop(seconds=5*60) # +random.uniform(-30,30)) # Check every 5 mins +/- 30 s
+async def schedule_update_db():
+    async with lock:
+        global RUNES_DB
+
+        # Configure vars
+        rune_names = list(RUNES_DB.keys())
+        try:
+            rune_names.remove('last_updated') # skip 'last_updated'
+        except:
+            pass
+        url_list = [0]*len(rune_names)
+        for i, name in enumerate(rune_names):
+            url_list[i] = RUNES_DB[name]['url']
+        rune_cnt = len(rune_names)
+        extract_func_list = [runescrape.extract_prices_or_volume]*rune_cnt
+        selectors_list = [PRICE_VOLUME_SELECTOR_LIST]*rune_cnt
+
+    # Extract price and volume elements
+    price_volume_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
+    price_elements, volume_elements = [], []
+    for pair in price_volume_elements:
+        try:
+            price_elements.append(pair[0])
+            volume_elements.append(pair[1])
+        except: # Append TimeoutError if the pair var is unsubscriptable
+            price_elements.append(TimeoutError)
+            volume_elements.append(TimeoutError)
+
+    # Update cached db
+    async with lock:
+        RUNES_DB = runescrape.update_db_entries(prices_url_list=url_list,
+                                                cached_db=RUNES_DB,
+                                                file_path=PRICE_DATABASE_PATH,
+                                                price_elements_list=price_elements,
+                                                volume_elements_list=volume_elements)
+    
+    # Check for price changes
+    async with lock:
+        await schedule_price_mvmt_check()
+
+    # Update spreadsheet
+    worksheet, rune_names_std = init_worksheet_and_runes(SHEETS_URL)
+    runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, RUNES_DB)
+    print("Updating sheet...")
+    update_worksheet(rune_names_std, worksheet, runes_corresponding_prices)
+    
+    return
+
+@schedule_update_db.before_loop
+async def schedule_update_before():
     await bot.wait_until_ready()
-    print("Price movement check function ready.")
+    print("Database schedule update function ready.")
+
+# @schedule_price_mvmt_check.before_loop
+# async def schedule_mvmt_check_before():
+#     await bot.wait_until_ready()
+#     print("Price movement check function ready.")
 
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
     schedule_update_db.start()
-    await asyncio.sleep(5)
-    schedule_price_mvmt_check.start()
+    # await asyncio.sleep(5)
+    # schedule_price_mvmt_check.start()
 
 
 if __name__ == "__main__":
