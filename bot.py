@@ -218,6 +218,20 @@ async def status(ctx, rune_name_or_url: str = None):
             await ctx.send(msg)
             return
 
+@tasks.loop(seconds=5*60)
+async def db_check():
+    """Check if db have been corrupted and retrieve a backup if so.
+    """
+    async with lock:
+        global RUNES_DB
+        global PRICE_DATABASE_PATH
+
+        # If db is empty but the backup is filled, reupdate RUNES_DB
+        if bool(RUNES_DB) is False and bool(runescrape.read_json(PRICE_DATABASE_PATH)) is True:
+            RUNES_DB = runescrape.read_json(PRICE_DATABASE_PATH)
+
+        return
+
 # @tasks.loop(seconds=5*60)
 async def schedule_price_mvmt_check():
     # Load db
@@ -304,8 +318,11 @@ async def schedule_price_mvmt_check():
 
     return
 
-@tasks.loop(seconds=5*60) # +random.uniform(-30,30)) # Check every 5 mins +/- 30 s
+@tasks.loop(seconds=5*60+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
 async def schedule_update_db():
+    # Check db corruption
+    await db_check()
+    
     async with lock:
         global RUNES_DB
 
@@ -341,6 +358,9 @@ async def schedule_update_db():
                                                 price_elements_list=price_elements,
                                                 volume_elements_list=volume_elements)
     
+    # Check db again
+    await db_check()
+
     # Check for price changes
     async with lock:
         await schedule_price_mvmt_check()
