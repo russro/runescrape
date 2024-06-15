@@ -113,6 +113,18 @@ async def add(ctx, rune_name_or_url: str = None) -> None:
 
     return
 
+@bot.command()
+async def mintcnt(ctx, rune_name_or_url: str = None, mint_amt: int = 1) -> None:
+    await ctx.send("Adding mint amount to rune...")
+
+    rune_name_standardized = runescrape.rune_name_or_url_standardizer(rune_name_or_url)
+
+    async with lock:
+        global RUNES_DB
+        RUNES_DB[rune_name_standardized]['tokens_per_mint'] = mint_amt
+
+    return
+
 async def rune_nickname_check_to_std(potential_nickname: str) -> str:
     """Check for nickname and replace to standard rune name.
     """
