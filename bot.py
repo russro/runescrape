@@ -6,6 +6,7 @@ import bot
 import asyncio
 import nest_asyncio
 import discord
+import numbers
 import runescrape
 
 from dotenv import load_dotenv
@@ -354,7 +355,17 @@ async def schedule_update_db():
     # Extract price and volume elements
     price_volume_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
     price_elements, volume_elements = [], []
-    for pair in price_volume_elements:
+    for i, pair in enumerate(price_volume_elements):
+        # Send message if scraped element is not a number
+        if not isinstance(pair[0], numbers.Number):
+            msg_channel = bot.get_channel(BOT_CHANNEL_ID)
+            await msg_channel.send(f"WARNING: Scraped price_element {pair[0]} from {url_list[i]}./n"
+                                   f"Appending previous price_element to current price.")
+        if not isinstance(pair[1], numbers.Number):
+            msg_channel = bot.get_channel(BOT_CHANNEL_ID)
+            await msg_channel.send(f"WARNING: Scraped volume_element {pair[1]} from {url_list[i]}.\n"
+                                   f"Setting volume_element as 0.")
+        
         try:
             price_elements.append(pair[0])
             volume_elements.append(pair[1])

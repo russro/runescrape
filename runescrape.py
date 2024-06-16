@@ -5,6 +5,7 @@ import re
 import validators
 import random
 import asyncio
+import numbers
 
 from playwright.async_api import async_playwright
 from playwright.async_api import Page, Browser
@@ -230,6 +231,9 @@ def update_db_entries(prices_url_list: List[str],
         # Resolve edge case of first scraped element being a list
         price = price_elements_list[i]
         price = price[0] if type(price) is list else price
+
+        # Sometimes, type 'type' gets scraped so copy last sample
+        price = price if isinstance(price, numbers.Number) else price_array[-1]
         
         try:
             price_array.append(price)
