@@ -331,7 +331,7 @@ async def schedule_price_mvmt_check():
     return
 
 @tasks.loop(seconds=5*60+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
-async def schedule_update_db():
+async def schedule_update_db(ctx):
     # Check db corruption
     await db_check()
     
@@ -362,13 +362,16 @@ async def schedule_update_db():
             price_elements.append(TimeoutError)
             volume_elements.append(TimeoutError)
 
-    # Update cached db
+    # Update cached db; skip if scrape fails
     async with lock:
-        RUNES_DB = runescrape.update_db_entries(prices_url_list=url_list,
-                                                cached_db=RUNES_DB,
-                                                file_path=PRICE_DATABASE_PATH,
-                                                price_elements_list=price_elements,
-                                                volume_elements_list=volume_elements)
+        try:
+            RUNES_DB = runescrape.update_db_entries(prices_url_list=url_list,
+                                                    cached_db=RUNES_DB,
+                                                    file_path=PRICE_DATABASE_PATH,
+                                                    price_elements_list=price_elements,
+                                                    volume_elements_list=volume_elements)
+        except Exception as e:
+            await ctx.send(e)
     
     # Check db again
     await db_check()
