@@ -259,6 +259,11 @@ def update_db_entries(prices_url_list: List[str],
 
         entries.update(to_add) # update dictionary
 
+    try:
+        write_json("external_cache.json", entries)
+    except:
+        return entries
+    
     write_json(file_path, entries)
 
     return entries
