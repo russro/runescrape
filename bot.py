@@ -331,7 +331,7 @@ async def schedule_price_mvmt_check():
     return
 
 @tasks.loop(seconds=5*60+random.uniform(-30,30)) # Check every 5 mins +/- 30 s
-async def schedule_update_db(ctx):
+async def schedule_update_db():
     # Check db corruption
     await db_check()
     
@@ -371,7 +371,8 @@ async def schedule_update_db(ctx):
                                                     price_elements_list=price_elements,
                                                     volume_elements_list=volume_elements)
         except Exception as e:
-            await ctx.send(e)
+            msg_channel = bot.get_channel(BOT_CHANNEL_ID)
+            await msg_channel.send(e)
     
     # Check db again
     await db_check()
