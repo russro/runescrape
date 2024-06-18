@@ -393,10 +393,13 @@ async def schedule_update_db():
         await schedule_price_mvmt_check()
 
     # Update spreadsheet
-    worksheet, rune_names_std = init_worksheet_and_runes(SHEETS_URL)
-    runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, RUNES_DB)
-    print("Updating sheet...")
-    update_worksheet(rune_names_std, worksheet, runes_corresponding_prices)
+    try:
+        worksheet, rune_names_std = init_worksheet_and_runes(SHEETS_URL)
+        runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, RUNES_DB)
+        print("Updating sheet...")
+        update_worksheet(rune_names_std, worksheet, runes_corresponding_prices)
+    except Exception as e:
+        print(e)
     
     return
 
