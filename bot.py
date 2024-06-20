@@ -356,22 +356,27 @@ async def schedule_update_db():
     price_volume_elements = asyncio.run(runescrape.extract_elements(url_list, extract_func_list, selectors_list))
     price_elements, volume_elements = [], []
     for i, pair in enumerate(price_volume_elements):
+        try:
+            price = pair[0]
+            volume = pair[1]
+            price_elements.append(price)
+            volume_elements.append(volume)
+        except: # Append TimeoutError if the pair var is unsubscriptable
+            price = TimeoutError
+            volume = TimeoutError
+            price_elements.append(price)
+            volume_elements.append(volume)
+
         # Send message if scraped element is not a number
-        if not isinstance(pair[0], numbers.Number):
+        if not isinstance(price, numbers.Number):
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
-            await msg_channel.send(f"WARNING: Scraped price_element {pair[0]} from {url_list[i]}./n"
+            await msg_channel.send(f"WARNING: Scraped price_element {price} from {url_list[i]}./n"
                                    f"Appending previous price_element to current price.")
-        if not isinstance(pair[1], numbers.Number):
+        if not isinstance(volume, numbers.Number):
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
-            await msg_channel.send(f"WARNING: Scraped volume_element {pair[1]} from {url_list[i]}.\n"
+            await msg_channel.send(f"WARNING: Scraped volume_element {volume} from {url_list[i]}.\n"
                                    f"Setting volume_element as 0.")
         
-        try:
-            price_elements.append(pair[0])
-            volume_elements.append(pair[1])
-        except: # Append TimeoutError if the pair var is unsubscriptable
-            price_elements.append(TimeoutError)
-            volume_elements.append(TimeoutError)
 
     # Update cached db; skip if scrape fails
     async with lock:
