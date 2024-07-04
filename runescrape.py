@@ -222,6 +222,10 @@ def update_db_entries(prices_url_list: List[str],
         # If this happens, duplicate the previous value.
         try:
             volume = volume_elements_list[i]
+
+            # Doing this to induce a potential TimeoutError being assigned to volume
+            _ = []
+            _.append(volume)
         except TypeError or TimeoutError:
             try:
                 volume = entries[rune_name_standardized]['volume']
