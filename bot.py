@@ -367,15 +367,15 @@ async def schedule_update_db():
             price_elements.append(price)
             volume_elements.append(volume)
 
-        # Send message if scraped element is not a number
-        if not isinstance(price, numbers.Number):
-            msg_channel = bot.get_channel(BOT_CHANNEL_ID)
-            await msg_channel.send(f"WARNING: Scraped price_element {price} from {url_list[i]}./n"
-                                   f"Appending previous price_element to current price.")
-        if not isinstance(volume, numbers.Number):
-            msg_channel = bot.get_channel(BOT_CHANNEL_ID)
-            await msg_channel.send(f"WARNING: Scraped volume_element {volume} from {url_list[i]}.\n"
-                                   f"Setting volume_element as 0.")
+        # # Send message if scraped element is not a number
+        # if not isinstance(price, numbers.Number):
+        #     msg_channel = bot.get_channel(BOT_CHANNEL_ID)
+        #     await msg_channel.send(f"WARNING: Scraped price_element {price} from {url_list[i]}./n"
+        #                            f"Appending previous price_element to current price.")
+        # if not isinstance(volume, numbers.Number):
+        #     msg_channel = bot.get_channel(BOT_CHANNEL_ID)
+        #     await msg_channel.send(f"WARNING: Scraped volume_element {volume} from {url_list[i]}.\n"
+        #                            f"Setting volume_element as 0.")
         
 
     # Update cached db; skip if scrape fails

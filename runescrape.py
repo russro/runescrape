@@ -222,11 +222,11 @@ def update_db_entries(prices_url_list: List[str],
         # If this happens, duplicate the previous value.
         try:
             volume = volume_elements_list[i]
-        except TypeError:
+        except TypeError or TimeoutError:
             try:
                 volume = entries[rune_name_standardized]['volume']
             except:
-                volume = 0
+                volume = 0 + 0.000000001
         
         # Resolve edge case of first scraped element being a list
         price = price_elements_list[i]
@@ -237,7 +237,7 @@ def update_db_entries(prices_url_list: List[str],
         
         try:
             price_array.append(price)
-        except TypeError:
+        except TypeError or TimeoutError:
             price_array.append(price_array[-1] + 0.000000001)
 
         price_timestamps.append(curr_time)
