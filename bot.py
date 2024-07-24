@@ -307,7 +307,7 @@ async def schedule_price_mvmt_check():
             # Update db with last_notified to prevent overnotifying channel
             to_add = {'last_notified': timestamp_array[-1]}
             RUNES_DB[rune_name].update(to_add)
-            runescrape.write_json(PRICE_DATABASE_PATH, RUNES_DB)
+            # runescrape.write_json(PRICE_DATABASE_PATH, RUNES_DB)
 
             # Send price change msg
             msg_channel = bot.get_channel(BOT_CHANNEL_ID)
