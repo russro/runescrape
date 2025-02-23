@@ -36,6 +36,7 @@ try:
     NICKNAMES_DB = runescrape.read_json(NICKNAME_DATABASE_PATH)
 except:
     NICKNAMES_DB = {}
+CURR_PRICE_USD = 0
 
 # Enable nested asyncio calls
 nest_asyncio.apply()
@@ -198,7 +199,12 @@ async def status(ctx, rune_name_or_url: str = None):
                 # Configure vars to print
                 ticker = runescrape.rune_name_std_to_ticker(rune_name_std)
                 curr_price_sats = rune_data['price_array'][-1]
-                curr_price_usd = sats_to_usd(curr_price_sats)
+                global CURR_PRICE_USD
+                try:
+                    curr_price_usd = sats_to_usd(curr_price_sats)
+                    CURR_PRICE_USD = curr_price_usd
+                except:
+                    curr_price_usd = CURR_PRICE_USD
                 tokens_per_mint = int(rune_data['tokens_per_mint'])
                 volume = rune_data['volume']
 
@@ -398,13 +404,13 @@ async def schedule_update_db():
         await schedule_price_mvmt_check()
 
     # Update spreadsheet
-    try:
-        worksheet, rune_names_std = init_worksheet_and_runes(SHEETS_URL)
-        runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, RUNES_DB)
-        print("Updating sheet...")
-        update_worksheet(rune_names_std, worksheet, runes_corresponding_prices)
-    except Exception as e:
-        print(e)
+    #try:
+    #    worksheet, rune_names_std = init_worksheet_and_runes(SHEETS_URL)
+    #    runes_corresponding_prices = construct_runes_corresponding_prices(rune_names_std, RUNES_DB)
+    #    print("Updating sheet...")
+    #    update_worksheet(rune_names_std, worksheet, runes_corresponding_prices)
+    #except Exception as e:
+    #    print(e)
     
     return
 
